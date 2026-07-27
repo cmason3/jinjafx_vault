@@ -1,2 +1,1 @@
-# jinjafx_vault
-JinjaFx Vault
+# JinjaFx Vault
