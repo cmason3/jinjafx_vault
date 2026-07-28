@@ -156,11 +156,9 @@ func main() {
   flag.Usage = func() {
     fmt.Fprintf(os.Stderr, "Usage: %s [options] <command> [args]\n\n", os.Args[0])
     fmt.Fprintf(os.Stderr, "Options:\n")
-    fmt.Fprintf(os.Stderr, "  -l <address>           Bind Address (default is 127.0.0.1)\n")
+    fmt.Fprintf(os.Stderr, "  -l <address>           Listen Address (default is 127.0.0.1)\n")
     fmt.Fprintf(os.Stderr, "  -p <port>              Listen Port (default is 8080)\n")
-    fmt.Fprintf(os.Stderr, "  -ft <dir>              File Transfer Directory\n")
-    fmt.Fprintf(os.Stderr, "  -r <Nh|Nd|Nw|Nm|Ny>    File Retention Period\n")
-    fmt.Fprintf(os.Stderr, "  -weblog                Enable WebLog via \"/logs\"\n")
+    fmt.Fprintf(os.Stderr, "  -logfile <vault.log>   Log File\n")
     fmt.Fprintf(os.Stderr, "  -xff                   Use X-Forwarded-For in Logs\n\n")
     fmt.Fprintf(os.Stderr, "Environment Variables:\n")
     fmt.Fprintf(os.Stderr, "  WEBTTY_WEBLOG_TOKEN    Auth Token for WebLog\n")
