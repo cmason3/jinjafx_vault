@@ -146,17 +146,17 @@ func wwwHandler(h http.Handler, tmpl *template.Template, eTag string, ft bool) h
 
 func main() {
   if _, defined := os.LookupEnv("JOURNAL_STREAM"); !defined {
-    fmt.Fprintf(os.Stdout, "WebTTY v%s - Remote Terminal\n", Version)
-    fmt.Fprintf(os.Stdout, "URL https://github.com/cmason3/webtty\n\n")
+    fmt.Fprintf(os.Stdout, "JinjaFx Vault v%s\n", Version)
+    fmt.Fprintf(os.Stdout, "URL https://github.com/cmason3/jinjafx_vault\n\n")
 
   } else {
     log.SetFlags(log.Flags() &^ (log.Ldate | log.Ltime))
   }
 
   flag.Usage = func() {
-    fmt.Fprintf(os.Stderr, "Usage: webtty [options] <command> [args]\n\n")
+    fmt.Fprintf(os.Stderr, "Usage: %s [options] <command> [args]\n\n", os.Args[0])
     fmt.Fprintf(os.Stderr, "Options:\n")
-    fmt.Fprintf(os.Stderr, "  -l <address>           Listen Address (default is 127.0.0.1)\n")
+    fmt.Fprintf(os.Stderr, "  -l <address>           Bind Address (default is 127.0.0.1)\n")
     fmt.Fprintf(os.Stderr, "  -p <port>              Listen Port (default is 8080)\n")
     fmt.Fprintf(os.Stderr, "  -ft <dir>              File Transfer Directory\n")
     fmt.Fprintf(os.Stderr, "  -r <Nh|Nd|Nw|Nm|Ny>    File Retention Period\n")
