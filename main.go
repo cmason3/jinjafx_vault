@@ -56,15 +56,8 @@ func responseWriter(w http.ResponseWriter) *httpWriter {
   return &httpWriter { w, "", http.StatusOK }
 }
 func (w *httpWriter) WriteHeader(statusCode int) {
-  if statusCode != http.StatusOK {
-    for _, k := range []string {
-      "Cache-Control",
-      "ETag",
-    } {
-      w.ResponseWriter.Header().Del(k)
-    }
-  }
   w.statusCode = statusCode
+  w.Header().Set("Cache-Control", "no-store")
   w.ResponseWriter.WriteHeader(w.statusCode)
 }
 
