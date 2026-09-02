@@ -47,7 +47,7 @@ import (
   "github.com/google/uuid"
 )
 
-const Version = "0.1.0"
+const Version = "0.2.0"
 
 type user struct {
   Roles []string `json:"roles"`
