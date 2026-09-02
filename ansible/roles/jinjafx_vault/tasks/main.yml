@@ -1,0 +1,13 @@
+- name: "Login to JinjaFx Vault"
+  ansible.builtin.uri:
+    url: "{{ jinjafx_vault_url }}/v1/login"
+    validate_certs: "{{ jinjafx_vault_verify|default(True) }}"
+    timeout: "{{ jinjafx_vault_timeout|default(5) }}"
+    body: '{ "user": "{{ jinjafx_vault_user }}", "password": "{{ jinjafx_vault_password }}" }'
+    body_format: json
+    return_content: true
+    method: POST
+  register: jinjafx_vault_login
+  changed_when: true
+  run_once: true
+  notify: "Logout from JinjaFx Vault"

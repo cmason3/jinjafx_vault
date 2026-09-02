@@ -1,0 +1,10 @@
+- name: "Logout from JinjaFx Vault"
+  ansible.builtin.uri:
+    url: "{{ jinjafx_vault_url }}/v1/logout"
+    validate_certs: "{{ jinjafx_vault_verify|default(True) }}"
+    timeout: "{{ jinjafx_vault_timeout|default(5) }}"
+    method: POST
+    status_code: 204
+    headers:
+      "X-Vault-Token": "{{ jinjafx_vault_login.json.token }}"
+  run_once: true
