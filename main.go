@@ -47,7 +47,7 @@ import (
   "github.com/google/uuid"
 )
 
-const Version = "0.2.0"
+const Version = "0.2.1"
 
 var args struct {
   listen, tlsCrt, tlsKey string
@@ -172,7 +172,9 @@ func isAuthenticated(w http.ResponseWriter, r *http.Request) (string, bool, bool
         authMutex.Lock()
         defer authMutex.Unlock()
 
-        authTokens[t].expires = time.Now().UTC().Add(args.idle)
+        if _, ok := authTokens[t]; ok {
+          authTokens[t].expires = time.Now().UTC().Add(args.idle)
+        }
       }(t)
 
       if len(vault.Users[v.user].Password) > 0 && vault.Users[v.user].LastChanged.IsZero() {
@@ -209,32 +211,31 @@ func isAuthenticated(w http.ResponseWriter, r *http.Request) (string, bool, bool
 func readVaultFile(env bool) error {
   var vaultKey []byte
   var dflag bool
-  var err error
 
-  if env {
-    if k, defined := os.LookupEnv("JFX_VAULT_KEY"); defined {
-      if vaultKey, err = base58.Decode(k); err != nil {
+  if b, err := os.ReadFile(vaultFile); err == nil {
+    if env {
+      if k, defined := os.LookupEnv("JFX_VAULT_KEY"); defined {
+        if vaultKey, err = base58.Decode(k); err != nil {
+          return err
+        }
+      }
+    }
+
+    if len(vaultKey) == 0 {
+      fmt.Fprintf(os.Stderr, "Vault Key: ")
+      k, _ := term.ReadPassword(int(os.Stdin.Fd()))
+      fmt.Fprintf(os.Stderr, "\n")
+      dflag = true
+
+      if vaultKey, err = base58.Decode(string(k)); err != nil {
         return err
       }
     }
-  }
 
-  if len(vaultKey) == 0 {
-    fmt.Fprintf(os.Stderr, "Vault Key: ")
-    k, _ := term.ReadPassword(int(os.Stdin.Fd()))
-    fmt.Fprintf(os.Stderr, "\n")
-    dflag = true
-
-    if vaultKey, err = base58.Decode(string(k)); err != nil {
+    if vaultCipher, err = chacha20poly1305.NewX(vaultKey); err != nil {
       return err
     }
-  }
 
-  if vaultCipher, err = chacha20poly1305.NewX(vaultKey); err != nil {
-    return err
-  }
-
-  if b, err := os.ReadFile(vaultFile); err == nil {
     if plaintext, err := vaultCipher.Open(nil, b[1:chacha20poly1305.NonceSizeX + 1], b[chacha20poly1305.NonceSizeX + 1:], nil); err == nil {
       if err := json.Unmarshal(plaintext, &vault); err != nil {
         return err
