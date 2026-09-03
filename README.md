@@ -18,6 +18,7 @@ Options:
   -l[isten] <address>           Listen Address (default is 127.0.0.1)
   -p[ort] <port>                Listen Port (default is http/8080 or https/8443)
   -idle <n(mn|hr)>              Change User Idle Timeout (default is 15mn)
+  -rlimit <n/n(mn|hr)>          Change Login Rate Limit (default is 3/15mn)
   -tls                          Enable Transport Layer Security
    -tls.crt <vault.crt>         TLS Certificate Chain
    -tls.key <vault.crt>         TLS Private Key
@@ -144,17 +145,17 @@ There is also a JinjaFx Vault Ansible role that provides a similar `jinjafx_vaul
    "2026-08-24T12:46:33.183923586Z": {
      "user": "root",
      "address": "127.0.0.1",
-     "message": "ADD /user/<user>"
+     "message": "Created UserPass User '<user>'"
    },
    "2026-08-24T14:09:39.32707299Z": {
      "user": "root",
      "address": "127.0.0.1",
-     "message": "ADD /namespace/<namespace>"
+     "message": "Created Namespace '<namespace>'"
    },
    "2026-08-24T14:10:57.545217863Z": {
      "user": "root",
      "address": "127.0.0.1",
-     "message": "ADD /user/<user>/namespaces/<namespace>/rw"
+     "message": "Assigned User '<user>' to Namespace '<namespace>' as 'rw'"
    }
  }
  ```

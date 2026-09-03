@@ -53,6 +53,7 @@ var args struct {
   listen, tlsCrt, tlsKey string
   tls, xff, insecure bool
   idle time.Duration
+  rlimit []int
   port int
 }
 
@@ -415,7 +416,7 @@ func apiLoginHandler(w http.ResponseWriter, r *http.Request) {
           userRateLimits[key] = make([]time.Time, 0)
 
         } else {
-          cutoff := now.Add(-(15 * time.Minute))
+          cutoff := now.Add(-(time.Duration(args.rlimit[1]) * time.Minute))
 
           for ; i < len(userRateLimits[key]); i++ {
             if userRateLimits[key][i].After(cutoff) {
@@ -425,7 +426,7 @@ func apiLoginHandler(w http.ResponseWriter, r *http.Request) {
           }
         }
 
-        if len(userRateLimits[key]) < 3 {
+        if len(userRateLimits[key]) < args.rlimit[0] {
           if len(vault.Users[u].Password) > 0 {
             if !verifyPassword(request.Password, v.Password) {
               userRateLimits[key] = append(userRateLimits[key], now)
@@ -453,7 +454,7 @@ func apiLoginHandler(w http.ResponseWriter, r *http.Request) {
           }
         } else {
           userRateLimits[key] = append(userRateLimits[key][1:], now)
-          http.Error(w, "Too Many Failed Attempts (3 in 15m)", http.StatusTooManyRequests)
+          http.Error(w, fmt.Sprintf("Too Many Failed Attempts (%d in %dm)", args.rlimit[0], args.rlimit[1]), http.StatusTooManyRequests)
           return
         }
   
@@ -1307,13 +1308,14 @@ func main() {
   flag.Usage = func() {
     fmt.Fprintf(os.Stderr, "Usage: %s <action> [options]\n\n", os.Args[0])
     fmt.Fprintf(os.Stderr, "Actions:\n")
-    fmt.Fprintf(os.Stderr, "  -init <jinjafx.vault>         Initialise New Vault\n")
-    fmt.Fprintf(os.Stderr, "  -reset <jinjafx.vault>        Reset Vault Credentials\n")
-    fmt.Fprintf(os.Stderr, "  -serve <jinjafx.vault>        Start Vault Server\n\n")
+    fmt.Fprintf(os.Stderr, "  -i[nit] <jinjafx.vault>       Initialise New Vault\n")
+    fmt.Fprintf(os.Stderr, "  -r[eset] <jinjafx.vault>      Reset Vault Credentials\n")
+    fmt.Fprintf(os.Stderr, "  -s[erve] <jinjafx.vault>      Start Vault Server\n\n")
     fmt.Fprintf(os.Stderr, "Options:\n")
     fmt.Fprintf(os.Stderr, "  -l[isten] <address>           Listen Address (default is 127.0.0.1)\n")
     fmt.Fprintf(os.Stderr, "  -p[ort] <port>                Listen Port (default is http/8080 or https/8443)\n")
     fmt.Fprintf(os.Stderr, "  -idle <n(mn|hr)>              Change User Idle Timeout (default is 15mn)\n")
+    fmt.Fprintf(os.Stderr, "  -rlimit <n/n(mn|hr)>          Change Login Rate Limit (default is 3/15mn)\n")
     fmt.Fprintf(os.Stderr, "  -tls                          Enable Transport Layer Security\n")
     fmt.Fprintf(os.Stderr, "   -tls.crt <vault.crt>         TLS Certificate Chain\n")
     fmt.Fprintf(os.Stderr, "   -tls.key <vault.key>         TLS Private Key\n")
@@ -1324,26 +1326,42 @@ func main() {
   }
 
   var action uint8
-  flag.Func("init", "", func(s string) error {
-    action |= (1 << 0); vaultFile = s;
-    return ternary(strings.HasPrefix(s, "-"), fmt.Errorf(""), nil)
-  })
-  flag.Func("reset", "", func(s string) error {
-    action |= (1 << 1); vaultFile = s;
-    return ternary(strings.HasPrefix(s, "-"), fmt.Errorf(""), nil)
-  })
-  flag.Func("serve", "", func(s string) error {
-    action |= (1 << 2); vaultFile = s;
-    return ternary(strings.HasPrefix(s, "-"), fmt.Errorf(""), nil)
-  })
+  actionFunc := func(n int) (func(s string) error) {
+    return func(s string) error {
+      action |= (1 << n); vaultFile = s;
+      return ternary(strings.HasPrefix(s, "-"), fmt.Errorf(""), nil)
+    }
+  }
+
+  flag.Func("i", "", actionFunc(0))
+  flag.Func("init", "", actionFunc(0))
+  flag.Func("r", "", actionFunc(1))
+  flag.Func("reset", "", actionFunc(1))
+  flag.Func("s", "", actionFunc(2))
+  flag.Func("serve", "", actionFunc(2))
   flag.StringVar(&args.listen, "l", "127.0.0.1", "")
   flag.StringVar(&args.listen, "listen", "127.0.0.1", "")
   flag.IntVar(&args.port, "p", 0, "")
   flag.IntVar(&args.port, "port", 0, "")
 
+  args.rlimit = []int{3, 15}
+  flag.Func("rlimit", "", func(s string) error {
+    if m := regexp.MustCompile(`^([1-9][0-9]*)/([1-9][0-9]*)(mn|hr)$`).FindStringSubmatch(s); m != nil {
+      n1 , _ := strconv.Atoi(m[1])
+      n2 , _ := strconv.Atoi(m[2])
+
+      if m[3] == "hr" {
+        n2 *= 60
+      }
+      args.rlimit = []int{n1, n2}
+      return nil
+    }
+    return fmt.Errorf("")
+  })
+
   args.idle = 15 * time.Minute
   flag.Func("idle", "", func(s string) error {
-    if m := regexp.MustCompile(`^[1-9][0-9]*(mn|hr)$`).FindStringSubmatch(s); m != nil {
+    if m := regexp.MustCompile(`^([1-9][0-9]*)(mn|hr)$`).FindStringSubmatch(s); m != nil {
       n , _ := strconv.Atoi(m[1])
 
       switch m[2] {
@@ -1352,6 +1370,7 @@ func main() {
         case "hr":
           args.idle = time.Duration(n) * time.Hour
       }
+      return nil
     }
     return fmt.Errorf("")
   })
