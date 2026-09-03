@@ -17,6 +17,7 @@ Actions:
 Options:
   -l[isten] <address>           Listen Address (default is 127.0.0.1)
   -p[ort] <port>                Listen Port (default is http/8080 or https/8443)
+  -idle <n(mn|hr)>              Change User Idle Timeout (default is 15mn)
   -tls                          Enable Transport Layer Security
    -tls.crt <vault.crt>         TLS Certificate Chain
    -tls.key <vault.crt>         TLS Private Key
