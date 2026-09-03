@@ -49,6 +49,13 @@ import (
 
 const Version = "0.2.0"
 
+var args struct {
+  listen, tlsCrt, tlsKey string
+  tls, xff, insecure bool
+  idle time.Duration
+  port int
+}
+
 type user struct {
   Roles []string `json:"roles"`
   Namespaces map[string]string `json:"namespaces,omitzero"`
@@ -118,11 +125,11 @@ func ternary[T any](c bool, t, f T) T {
   return f
 }
 
-func logRequest(h http.Handler, xff bool) http.HandlerFunc {
+func logRequest(h http.Handler) http.HandlerFunc {
   return func(w http.ResponseWriter, r *http.Request) {
     _w := responseWriter(w)
 
-    if xff && r.Header.Get("X-Forwarded-For") != "" {
+    if args.xff && r.Header.Get("X-Forwarded-For") != "" {
       _w.remoteHost = r.Header.Get("X-Forwarded-For")
 
     } else {
@@ -155,24 +162,36 @@ func isAuthenticated(w http.ResponseWriter, r *http.Request) (string, bool, bool
   authMutex.RLock()
   defer authMutex.RUnlock()
 
-  if v, ok := authTokens[r.Header.Get("X-Vault-Token")]; ok {
+  t := r.Header.Get("X-Vault-Token")
+  if v, ok := authTokens[t]; ok {
     if _, ok := vault.Users[v.user]; ok && !vault.Users[v.user].Disabled && (time.Now().UTC().Before(v.expires)) {
       w.(*httpWriter).remoteUser = v.user
 
+      go func(t string) {
+        authMutex.Lock()
+        defer authMutex.Unlock()
+
+        authTokens[t].expires = time.Now().UTC().Add(args.idle)
+      }(t)
+
+      if len(vault.Users[v.user].Password) > 0 && vault.Users[v.user].LastChanged.IsZero() {
+        return v.user, true, true
+      }
+
       if ln := len(vault.Users[v.user].Expiry); ln > 0 {
         var d time.Duration
-        n, _ := strconv.Atoi(vault.Users[v.user].Expiry[ln-1:])
+        n, _ := strconv.Atoi(vault.Users[v.user].Expiry[ln-2:])
   
-        switch vault.Users[v.user].Expiry[:ln-1] {
-          case "h":
+        switch vault.Users[v.user].Expiry[:ln-2] {
+          case "hr":
             d = time.Duration(n) * time.Hour
-          case "d":
+          case "dy":
             d = time.Duration(n) * time.Hour * 24
-          case "w":
+          case "wk":
             d = time.Duration(n) * time.Hour * 24 * 7
-          case "m":
+          case "mh":
             d = time.Duration(n) * time.Hour * 24 * 30
-          case "y":
+          case "yr":
             d = time.Duration(n) * time.Hour * 24 * 365
         }
         
@@ -182,7 +201,6 @@ func isAuthenticated(w http.ResponseWriter, r *http.Request) (string, bool, bool
       }
       return v.user, true, false
     }
-    delete(authTokens, r.Header.Get("X-Vault-Token"))
   }
   return "", false, false
 }
@@ -346,14 +364,14 @@ func defaultHandler() http.HandlerFunc {
   }
 }
 
-func apiHandler(insecure bool) http.HandlerFunc {
+func apiHandler() http.HandlerFunc {
   return func(w http.ResponseWriter, r *http.Request) {
     if r.Method == http.MethodGet {
       apiGetHandler(w, r)
 
     } else if r.Method == http.MethodPost {
       if r.URL.Path == "/login" {
-        apiLoginHandler(w, r, insecure)
+        apiLoginHandler(w, r)
 
       } else if r.URL.Path == "/logout" {
         apiLogoutHandler(w, r)
@@ -370,7 +388,7 @@ func apiHandler(insecure bool) http.HandlerFunc {
   }
 }
 
-func apiLoginHandler(w http.ResponseWriter, r *http.Request, insecure bool) {
+func apiLoginHandler(w http.ResponseWriter, r *http.Request) {
   var request struct {
     User string `json:"user"`
     Password string `json:"password"`
@@ -416,7 +434,7 @@ func apiLoginHandler(w http.ResponseWriter, r *http.Request, insecure bool) {
             }
           } else if len(vault.Users[u].LdapServer) > 0 {
             ldap.DefaultTimeout = time.Second * 5
-            if l, err := ldap.DialURL(fmt.Sprintf("ldaps://%s", vault.Users[u].LdapServer), ldap.DialWithTLSConfig(&tls.Config{InsecureSkipVerify: insecure})); err == nil {
+            if l, err := ldap.DialURL(fmt.Sprintf("ldaps://%s", vault.Users[u].LdapServer), ldap.DialWithTLSConfig(&tls.Config{InsecureSkipVerify: args.insecure})); err == nil {
               defer l.Close()
     
               if err := l.Bind(fmt.Sprintf("%s\\%s", vault.Users[u].LdapDomain, u), request.Password); err != nil {
@@ -446,7 +464,7 @@ func apiLoginHandler(w http.ResponseWriter, r *http.Request, insecure bool) {
 
         authTokens[t] = &authToken {
           user: u,
-          expires: time.Now().UTC().Add(time.Hour * 1),
+          expires: time.Now().UTC().Add(args.idle),
         }
 
         response := struct {
@@ -803,22 +821,55 @@ func apiPostHandler(w http.ResponseWriter, r *http.Request) {
         } else {
           http.Error(w, "Insufficient Privileges", http.StatusForbidden)
         }
-      } else if m := regexp.MustCompile(`^/user/(` + rUser + `)/chage/([1-9][0-9]*)([hdwmy])$`).FindStringSubmatch(r.URL.Path); m != nil { // Set Expiration for UserPass User
+      } else if m := regexp.MustCompile(`^/user/(` + rUser + `)/chage/([1-9][0-9]*)(hr|dy|wk|mh|yr)$`).FindStringSubmatch(r.URL.Path); m != nil { // Set Expiration for UserPass User
         u := strings.ToLower(m[1])
   
         if slices.Contains(vault.Users[ruser].Roles, "admin") {
-          if u != "root" && ruser != u {
+          if _, ok := vault.Users[u]; ok {
+            if len(vault.Users[u].Password) > 0 {
+              d := fmt.Sprintf("%s%s", m[2], m[3])
+
+              if vault.Users[u].Expiry != d {
+                vault.Users[u].Expiry = d
+  
+                vault.Audit[time.Now().UTC()] = &audit {
+                  User: ruser,
+                  Address: w.(*httpWriter).remoteHost,
+                  Message: fmt.Sprintf("Set Expiration for User '%s' to '%s'", u, d),
+                }
+  
+                if err := writeVaultFile(false); err == nil {
+                  w.WriteHeader(http.StatusNoContent)
+  
+                } else {
+                  http.Error(w, err.Error(), http.StatusInternalServerError)
+                }
+              } else {
+                http.Error(w, "User Not Modified", http.StatusNotModified)
+              }
+            } else {
+              http.Error(w, "Not UserPass User", http.StatusBadRequest)
+            }
+          } else {
+            http.Error(w, "User Not Found", http.StatusNotFound)
+          }
+        } else {
+          http.Error(w, "Insufficient Privileges", http.StatusForbidden)
+        }
+      } else if m := regexp.MustCompile(`^/user/(` + rUser + `)/expire$`).FindStringSubmatch(r.URL.Path); m != nil { // Force Password Change for UserPass User
+        u := strings.ToLower(m[1])
+  
+        if slices.Contains(vault.Users[ruser].Roles, "admin") {
+          if ruser != u {
             if _, ok := vault.Users[u]; ok {
               if len(vault.Users[u].Password) > 0 {
-                d := fmt.Sprintf("%s%s", m[2], m[3])
-
-                if vault.Users[u].Expiry != d {
-                  vault.Users[u].Expiry = d
+                if !vault.Users[u].LastChanged.IsZero() {
+                  vault.Users[u].LastChanged = time.Time{}
   
                   vault.Audit[time.Now().UTC()] = &audit {
                     User: ruser,
                     Address: w.(*httpWriter).remoteHost,
-                    Message: fmt.Sprintf("Set Expiration for User '%s' to '%s'", u, d),
+                    Message: fmt.Sprintf("Forced Password Change for User '%s'", u),
                   }
   
                   if err := writeVaultFile(false); err == nil {
@@ -842,7 +893,7 @@ func apiPostHandler(w http.ResponseWriter, r *http.Request) {
         } else {
           http.Error(w, "Insufficient Privileges", http.StatusForbidden)
         }
-      } else if m := regexp.MustCompile(`^/user/(\` + rUser + `)/disabled$`).FindStringSubmatch(r.URL.Path); m != nil { // Disable User
+      } else if m := regexp.MustCompile(`^/user/(` + rUser + `)/disabled$`).FindStringSubmatch(r.URL.Path); m != nil { // Disable User
         u := strings.ToLower(m[1])
   
         if slices.Contains(vault.Users[ruser].Roles, "admin") {
@@ -1079,35 +1130,31 @@ func apiDeleteHandler(w http.ResponseWriter, r *http.Request) {
         u := strings.ToLower(m[1])
   
         if slices.Contains(vault.Users[ruser].Roles, "admin") {
-          if u != "root" && ruser != u {
-            if _, ok := vault.Users[u]; ok {
-              if len(vault.Users[u].Password) > 0 {
-                if len(vault.Users[u].Expiry) > 0 {
-                  vault.Users[u].Expiry = ""
+          if _, ok := vault.Users[u]; ok {
+            if len(vault.Users[u].Password) > 0 {
+              if len(vault.Users[u].Expiry) > 0 {
+                vault.Users[u].Expiry = ""
   
-                  vault.Audit[time.Now().UTC()] = &audit {
-                    User: ruser,
-                    Address: w.(*httpWriter).remoteHost,
-                    Message: fmt.Sprintf("Cleared Expiration for User '%s'", u),
-                  }
+                vault.Audit[time.Now().UTC()] = &audit {
+                  User: ruser,
+                  Address: w.(*httpWriter).remoteHost,
+                  Message: fmt.Sprintf("Cleared Expiration for User '%s'", u),
+                }
   
-                  if err := writeVaultFile(false); err == nil {
-                    w.WriteHeader(http.StatusNoContent)
+                if err := writeVaultFile(false); err == nil {
+                  w.WriteHeader(http.StatusNoContent)
   
-                  } else {
-                    http.Error(w, err.Error(), http.StatusInternalServerError)
-                  }
                 } else {
-                  http.Error(w, "User Not Modified", http.StatusNotModified)
+                  http.Error(w, err.Error(), http.StatusInternalServerError)
                 }
               } else {
-                http.Error(w, "Not UserPass User", http.StatusBadRequest)
+                http.Error(w, "User Not Modified", http.StatusNotModified)
               }
             } else {
-              http.Error(w, "User Not Found", http.StatusNotFound)
+              http.Error(w, "Not UserPass User", http.StatusBadRequest)
             }
           } else {
-            http.Error(w, "Permission Denied", http.StatusForbidden)
+            http.Error(w, "User Not Found", http.StatusNotFound)
           }
         } else {
           http.Error(w, "Insufficient Privileges", http.StatusForbidden)
@@ -1266,6 +1313,7 @@ func main() {
     fmt.Fprintf(os.Stderr, "Options:\n")
     fmt.Fprintf(os.Stderr, "  -l[isten] <address>           Listen Address (default is 127.0.0.1)\n")
     fmt.Fprintf(os.Stderr, "  -p[ort] <port>                Listen Port (default is http/8080 or https/8443)\n")
+    fmt.Fprintf(os.Stderr, "  -idle <n(mn|hr)>              Change User Idle Timeout (default is 15mn)\n")
     fmt.Fprintf(os.Stderr, "  -tls                          Enable Transport Layer Security\n")
     fmt.Fprintf(os.Stderr, "   -tls.crt <vault.crt>         TLS Certificate Chain\n")
     fmt.Fprintf(os.Stderr, "   -tls.key <vault.key>         TLS Private Key\n")
@@ -1273,12 +1321,6 @@ func main() {
     fmt.Fprintf(os.Stderr, "  -k                            Allow Insecure LDAPS\n\n")
     fmt.Fprintf(os.Stderr, "Environment Variables:\n")
     fmt.Fprintf(os.Stderr, "  JFX_VAULT_KEY                 JinjaFx Vault Key\n\n")
-  }
-
-  var args struct {
-    listen, tlsCrt, tlsKey string
-    tls, xff, insecure bool
-    port int
   }
 
   var action uint8
@@ -1298,6 +1340,22 @@ func main() {
   flag.StringVar(&args.listen, "listen", "127.0.0.1", "")
   flag.IntVar(&args.port, "p", 0, "")
   flag.IntVar(&args.port, "port", 0, "")
+
+  args.idle = 15 * time.Minute
+  flag.Func("idle", "", func(s string) error {
+    if m := regexp.MustCompile(`^[1-9][0-9]*(mn|hr)$`).FindStringSubmatch(s); m != nil {
+      n , _ := strconv.Atoi(m[1])
+
+      switch m[2] {
+        case "mn":
+          args.idle = time.Duration(n) * time.Minute
+        case "hr":
+          args.idle = time.Duration(n) * time.Hour
+      }
+    }
+    return fmt.Errorf("")
+  })
+
   flag.BoolVar(&args.tls, "tls", false, "")
   flag.StringVar(&args.tlsCrt, "tls.crt", "", "")
   flag.StringVar(&args.tlsKey, "tls.key", "", "")
@@ -1410,7 +1468,7 @@ func main() {
 
     mux := http.NewServeMux()
     mux.Handle("/", defaultHandler())
-    mux.Handle("/v1/", http.StripPrefix("/v1", apiHandler(args.insecure)))
+    mux.Handle("/v1/", http.StripPrefix("/v1", apiHandler()))
 
     sCtx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
     defer stop()
@@ -1419,7 +1477,7 @@ func main() {
 
     s := &http.Server {
       Addr: fmt.Sprintf("%s:%d", args.listen, args.port),
-      Handler: logRequest(mux, args.xff),
+      Handler: logRequest(mux),
       ReadTimeout: time.Second * 15,
       WriteTimeout: time.Second * 30,
       IdleTimeout: time.Second * 120,

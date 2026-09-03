@@ -472,7 +472,38 @@ There is also a JinjaFx Vault Ansible role that provides a similar `jinjafx_vaul
 </details>
 
 <details>
- <summary><b>Set Expiration for UserPass User</b><br />&nbsp;&nbsp;&nbsp;&nbsp;<code>POST</code> <code><b>/v1/user/&lt;user&gt;/chage/&lt;n[hdwmy]&gt;</b></code></summary>
+ <summary><b>Set Expiration for UserPass User</b><br />&nbsp;&nbsp;&nbsp;&nbsp;<code>POST</code> <code><b>/v1/user/&lt;user&gt;/chage/&lt;duration&gt;</b></code></summary>
+
+ #### Required Roles
+ - admin
+
+ #### Required Headers
+ - X-Vault-Token
+
+ #### Valid Keys
+ - user - `^[a-z][a-z0-9_]*$`
+ - duration - `^[1-9][0-9]*(hr|dy|wk|mh|yr)$`
+
+ #### Response Codes
+ | Code | Response |
+ | :-: | :-- |
+ | 204 | User Expiry Information Updated |
+ | 304 | User Not Modified |
+ | 400 | Not UserPass User |
+ | 403 | Insufficient Privileges |
+ | 404 | User Not Found |
+ | 418 | User Password Expired |
+
+ #### Example Request (Password Expires in 3 Months)
+ ```
+ curl -sS -X POST -H "X-Vault-Token: $TOKEN" https://localhost:8443/v1/user/<user>/chage/3mh
+ ```
+ <hr>
+
+</details>
+
+<details>
+ <summary><b>Force Password Change for UserPass User</b><br />&nbsp;&nbsp;&nbsp;&nbsp;<code>POST</code> <code><b>/v1/user/&lt;user&gt;/expire</b></code></summary>
 
  #### Required Roles
  - admin
@@ -486,16 +517,17 @@ There is also a JinjaFx Vault Ansible role that provides a similar `jinjafx_vaul
  #### Response Codes
  | Code | Response |
  | :-: | :-- |
- | 204 | User Expiry Information Updated |
+ | 204 | User Password Expired |
  | 304 | User Not Modified |
  | 400 | Not UserPass User |
- | 403 | Insufficient Privileges / Permission Denied |
+ | 401 | Not Logged In |
+ | 403 | Permission Denied / Insufficient Privileges |
  | 404 | User Not Found |
  | 418 | User Password Expired |
 
- #### Example Request (Password Expires in 3 Months)
+ #### Example Request (Assign Admin Role)
  ```
- curl -sS -X POST -H "X-Vault-Token: $TOKEN" https://localhost:8443/v1/user/<user>/chage/3m
+ curl -sS -X POST -H "X-Vault-Token: $TOKEN" https://localhost:8443/v1/user/<user>/expire
  ```
  <hr>
 
@@ -724,7 +756,7 @@ There is also a JinjaFx Vault Ansible role that provides a similar `jinjafx_vaul
  | 204 | User Expiry Information Updated |
  | 304 | User Not Modified |
  | 400 | Not UserPass User |
- | 403 | Insufficient Privileges / Permission Denied |
+ | 403 | Insufficient Privileges |
  | 404 | User Not Found |
  | 418 | User Password Expired |
 
