@@ -2,7 +2,7 @@
 
 JinjaFx Vault is a Secrets Manager written in Go. It was written to accompany [JinjaFx](https://github.com/cmason3/jinjafx) to provide the ability to store credentials in a secure encrypted vault, with more granular access controls than Ansible Vault. It takes its inspiration from HasiCorp Vault, but with a much reduced feature set. The vault itself is encrypted using XChaCha20-Poly1305 with a cryptographically secure 32 byte random key, which provides 256-bit encryption. User credentials are stored within the vault using the Argon2id password hashing function where `t=8`, `m=32768` and `p=4`. Alongside standard user/password credentials it also supports secure ldap to authenticate users.
 
-JinjaFx Vault uses the concept of namespaces, which contain variables that can hold arbituary data (i.e. strings, numbers, arrays, lists, etc). Users are granted read/write or read-only access to namespaces to provide granular role based access control. All access to the vault is via a HTTP REST API, with the preference being via TLS unless you are placing a TLS based proxy in front of it (e.g. haproxy or nginx).
+JinjaFx Vault uses the concept of namespaces, which contain variables that can hold arbituary data (i.e. strings, numbers, arrays, lists, etc). Users are granted read/write or read-only access to namespaces to provide granular role based access control. All access to the vault is via a HTTP REST API, with the preference being via TLS unless you are placing a TLS based proxy in front of it (e.g. HAProxy or NGINX).
 
 ### Usage
 
