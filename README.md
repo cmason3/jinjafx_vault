@@ -10,9 +10,9 @@ JinjaFx Vault uses the concept of namespaces, which contain variables that can h
 ./jinjafx_vault <action> [options]
 
 Actions:
-  -init <jinjafx.vault>         Initialise New Vault
-  -reset <jinjafx.vault>        Reset Vault Credentials
-  -serve <jinjafx.vault>        Start Vault Server
+  -i[nit] <jinjafx.vault>       Initialise New Vault
+  -r[eset] <jinjafx.vault>      Reset Vault Credentials
+  -s[erve] <jinjafx.vault>      Start Vault Server
 
 Options:
   -l[isten] <address>           Listen Address (default is 127.0.0.1)
