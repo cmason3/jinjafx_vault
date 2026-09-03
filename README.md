@@ -519,7 +519,7 @@ There is also a JinjaFx Vault Ansible role that provides a similar `jinjafx_vaul
  #### Response Codes
  | Code | Response |
  | :-: | :-- |
- | 204 | User Password Expired |
+ | 204 | OK |
  | 304 | User Not Modified |
  | 400 | Not UserPass User |
  | 401 | Not Logged In |
