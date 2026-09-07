@@ -1,1 +1,6 @@
 {{ lookup("jinjafx_vault", "<namespace>", "<variable>") }}
+
+or
+
+{% set vault = lookup("jinjafx_vault", "<namespace>") %}
+{{ vault["variable"] }}

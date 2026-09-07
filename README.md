@@ -60,7 +60,7 @@ sudo systemctl status jinjafx_vault.service
 
 ### User Roles
 
-JinjaFx uses the concept of roles when defining users - the "admin" role is used to add/delete users, add/delete namespaces and other admin type functions, but it isn't allowed to add, modify or delete variables from within namespaces (it isn't even allowed to view them). The "user" role provides the opposite capabilities - it can't perform any of the admin functions, but it can get, add, update or delete variables within namespaces. The "root" user is the default admin user that is created when you initialise your vault - this account is used to add users and namespaces and then assign "rw" or "ro" permissions to namespaces on a per user basis. You can't assign the "root" user the "user" role, but you can assign the "admin" role to a normal user.
+JinjaFx uses roles when defining users - the "admin" role is used to add/delete users, add/delete namespaces and other admin type functions, but it isn't allowed to add, modify or delete variables from within namespaces (it isn't even allowed to view them). The "user" role provides the opposite capabilities - it can't perform any of the admin functions, but it can get, add, update or delete variables within namespaces. The "root" user is the default admin user that is created when you initialise your vault - this account is used to add users and namespaces and then assign "rw" or "ro" permissions to namespaces on a per user basis. You can't assign the "root" user the "user" role, but you can assign the "admin" role to a normal user.
 
 
 ### Getting Started
