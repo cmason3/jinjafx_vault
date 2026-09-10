@@ -1,5 +1,11 @@
 ## CHANGELOG
 
+### 0.2.2 - September 10, 2026
+- Removed historic rate limits after successfully logging in
+- Upgraded golang.org/x/crypto v0.56.0 => v0.57.0
+- Upgraded golang.org/x/sys v0.47.0 => v0.48.0
+- Upgraded golang.org/x/term v0.45.0 => v0.46.0
+
 ### 0.2.1 - September 3, 2026
 - Fixed an issue if `<jinjafx.vault>` doesn't exist
 - Fixed a segmentation violation when calling `/v1/logout` due to a race condition
@@ -15,5 +21,6 @@
 - Initial release
 
 
+[0.2.2]: https://github.com/cmason3/jinjafx_vault/compare/v0.2.1...v0.2.2
 [0.2.1]: https://github.com/cmason3/jinjafx_vault/compare/v0.2.0...v0.2.1
 [0.2.0]: https://github.com/cmason3/jinjafx_vault/compare/v0.1.0...v0.2.0

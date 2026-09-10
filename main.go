@@ -47,7 +47,7 @@ import (
   "github.com/google/uuid"
 )
 
-const Version = "0.2.1"
+const Version = "0.2.2"
 
 var args struct {
   listen, tlsCrt, tlsKey string
@@ -458,6 +458,8 @@ func apiLoginHandler(w http.ResponseWriter, r *http.Request) {
           http.Error(w, fmt.Sprintf("Too Many Failed Attempts (%d in %dm)", args.rlimit[0], args.rlimit[1]), http.StatusTooManyRequests)
           return
         }
+
+        delete(userRateLimits, key)
   
         authMutex.Lock()
         defer authMutex.Unlock()
