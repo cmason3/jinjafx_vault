@@ -845,6 +845,7 @@ There is also a JinjaFx Vault Ansible role that provides a similar `jinjafx_vaul
  | Code | Response |
  | :-: | :-- |
  | 204 | Namespace Deleted |
+ | 400 | Namespace Not Empty |
  | 401 | Not Logged In |
  | 403 | Insufficient Privileges |
  | 404 | Namespace Not Found |

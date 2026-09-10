@@ -47,7 +47,7 @@ import (
   "github.com/google/uuid"
 )
 
-const Version = "0.2.2"
+const Version = "0.2.3"
 
 var args struct {
   listen, tlsCrt, tlsKey string
@@ -1077,23 +1077,27 @@ func apiDeleteHandler(w http.ResponseWriter, r *http.Request) {
   
         if slices.Contains(vault.Users[ruser].Roles, "admin") {
           if _, ok := vault.Namespaces[ns]; ok {
-            delete(vault.Namespaces, ns)
+            if len(vault.Namespaces[ns]) == 0 {
+              delete(vault.Namespaces, ns)
   
-            for _, v := range vault.Users {
-              delete(v.Namespaces, ns)
-            }
+              for _, v := range vault.Users {
+                delete(v.Namespaces, ns)
+              }
   
-            vault.Audit[time.Now().UTC()] = &audit {
-              User: ruser,
-              Address: w.(*httpWriter).remoteHost,
-              Message: fmt.Sprintf("Deleted Namespace '%s'", ns),
-            }
+              vault.Audit[time.Now().UTC()] = &audit {
+                User: ruser,
+                Address: w.(*httpWriter).remoteHost,
+                Message: fmt.Sprintf("Deleted Namespace '%s'", ns),
+              }
   
-            if err := writeVaultFile(false); err == nil {
-              w.WriteHeader(http.StatusNoContent)
+              if err := writeVaultFile(false); err == nil {
+                w.WriteHeader(http.StatusNoContent)
   
+              } else {
+                http.Error(w, err.Error(), http.StatusInternalServerError)
+              }
             } else {
-              http.Error(w, err.Error(), http.StatusInternalServerError)
+              http.Error(w, "Namespace Not Empty", http.StatusBadRequest)
             }
           } else {
             http.Error(w, "Namespace Not Found", http.StatusNotFound)
