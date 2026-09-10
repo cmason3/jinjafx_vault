@@ -20,7 +20,7 @@
 - Changed `/v1/chage` duration values to `hr`, `dy`, `wk`, `mh`, `yr`
 - Added API method `/v1/<user>/expire` to force user password change
 
-### [v0.1.0] - September 2, 2026
+### v0.1.0 - September 2, 2026
 - Initial release
 
 
