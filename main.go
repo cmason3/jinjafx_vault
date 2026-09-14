@@ -15,6 +15,8 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
+ // IF USER DOESN't EXIST for Login THEN it doesn't move to 429
+
 package main
 
 import (
@@ -39,6 +41,7 @@ import (
   "crypto/tls"
   "crypto/rand"
   "crypto/cipher"
+  "path/filepath"
   "html/template"
   "encoding/json"
   "encoding/binary"
@@ -195,25 +198,34 @@ func isUserExpired(u string) bool {
   return false
 }
 
-func isAuthenticated(w http.ResponseWriter, r *http.Request) (string, bool, bool) {
+func isAuthenticated(w http.ResponseWriter, r *http.Request, sru bool) (string, bool, bool) {
   authMutex.RLock()
   defer authMutex.RUnlock()
 
-  t := r.Header.Get("X-Vault-Token")
-  if v, ok := authTokens[t]; ok {
-    if _, ok := vault.Users[v.user]; ok && !vault.Users[v.user].Disabled && (time.Now().UTC().Before(v.expires)) {
-      w.(*httpWriter).remoteUser = v.user
+  var t string
+  if t = r.Header.Get("X-Vault-Token"); t == "" {
+    if c, err := r.Cookie("X-Vault-Token"); err == nil {
+      t = c.Value
+    }
+  }
 
-      go func(t string) {
-        authMutex.Lock()
-        defer authMutex.Unlock()
-
-        if _, ok := authTokens[t]; ok {
-          authTokens[t].expires = time.Now().UTC().Add(args.idle)
+  if t != "" {
+    if v, ok := authTokens[t]; ok {
+      if _, ok := vault.Users[v.user]; ok && !vault.Users[v.user].Disabled && (time.Now().UTC().Before(v.expires)) {
+        if sru {
+          w.(*httpWriter).remoteUser = v.user
         }
-      }(t)
+        go func(t string) {
+          authMutex.Lock()
+          defer authMutex.Unlock()
 
-      return v.user, true, isUserExpired(v.user)
+          if _, ok := authTokens[t]; ok {
+            authTokens[t].expires = time.Now().UTC().Add(args.idle)
+          }
+        }(t)
+
+        return v.user, true, isUserExpired(v.user)
+      }
     }
   }
   return "", false, false
@@ -383,13 +395,23 @@ func wwwHandler(www fs.FS) http.HandlerFunc {
         r.URL.Path = "/index.html"
       }
 
+      if strings.HasPrefix(r.URL.Path, fmt.Sprintf("/%s/", tfields["Version"])) {
+        r.URL.Path = strings.TrimPrefix(r.URL.Path[1:], tfields["Version"]); vURL = true
+      }
+
+      if strings.HasSuffix(r.URL.Path, ".html") {
+        vaultMutex.RLock()
+        defer vaultMutex.RUnlock()
+       
+        if _, ok, _ := isAuthenticated(w, r, false); !ok && (r.URL.Path != "/login.html") {
+          http.Redirect(w, r, "/login.html", http.StatusSeeOther)
+          return
+        }
+      }
+
       if !debug && r.Header.Get("If-None-Match") == Version {
         w.WriteHeader(http.StatusNotModified)
         return
-      }
-
-      if strings.HasPrefix(r.URL.Path, fmt.Sprintf("/%s/", tfields["Version"])) {
-        r.URL.Path = strings.TrimPrefix(r.URL.Path[1:], tfields["Version"]); vURL = true
       }
 
       if b, err := fs.ReadFile(www, r.URL.Path[1:]); err == nil {
@@ -408,6 +430,15 @@ func wwwHandler(www fs.FS) http.HandlerFunc {
             http.Error(w, err.Error(), http.StatusInternalServerError)
             return
           }
+        }
+
+        switch filepath.Ext(r.URL.Path) {
+          case ".html":
+            w.Header().Set("Content-Type", "text/html; charset=utf-8")
+          case ".css":
+            w.Header().Set("Content-Type", "text/css; charset=utf-8")
+          case ".js":
+            w.Header().Set("Content-Type", "text/javascript; charset=utf-8")
         }
 
         if debug {
@@ -464,113 +495,117 @@ func apiLoginHandler(w http.ResponseWriter, r *http.Request) {
   }
 
   if err := json.NewDecoder(r.Body).Decode(&request); err == nil {
-    u := strings.ToLower(request.User)
-    w.(*httpWriter).remoteUser = u
+    if len(request.User) > 0 {
+      var i int
 
-    vaultMutex.RLock()
-    defer vaultMutex.RUnlock()
-
-    if v, ok := vault.Users[u]; ok {
-      if !vault.Users[u].Disabled {
-        var i int
-
-        key := fmt.Sprintf("%s/%s", w.(*httpWriter).remoteHost, u)
-        now := time.Now().UTC()
-
-        rateMutex.Lock()
-        defer rateMutex.Unlock()
-
-        if _, exists := userRateLimits[key]; !exists {
-          userRateLimits[key] = make([]time.Time, 0)
-
-        } else {
-          cutoff := now.Add(-(time.Duration(args.rlimit[1]) * time.Minute))
-
-          for ; i < len(userRateLimits[key]); i++ {
-            if userRateLimits[key][i].After(cutoff) {
-              userRateLimits[key] = userRateLimits[key][i:]
-              break
-            }
+      u := strings.ToLower(request.User)
+      w.(*httpWriter).remoteUser = u
+      // key := fmt.Sprintf("%s/%s", w.(*httpWriter).remoteHost, u)
+      key := w.(*httpWriter).remoteHost
+      now := time.Now().UTC()
+  
+      rateMutex.Lock()
+      defer rateMutex.Unlock()
+  
+      if _, exists := userRateLimits[key]; !exists {
+        userRateLimits[key] = make([]time.Time, 0)
+  
+      } else {
+        cutoff := now.Add(-(time.Duration(args.rlimit[1]) * time.Minute))
+  
+        for ; i < len(userRateLimits[key]); i++ {
+          if userRateLimits[key][i].After(cutoff) {
+            userRateLimits[key] = userRateLimits[key][i:]
+            break
           }
         }
+      }
 
-        if len(userRateLimits[key]) < args.rlimit[0] {
-          if len(vault.Users[u].Password) > 0 {
-            if !verifyPassword(request.Password, v.Password) {
-              userRateLimits[key] = append(userRateLimits[key], now)
-              http.Error(w, "Password Verification Failed", http.StatusUnauthorized)
-              return
-            }
-            expired = isUserExpired(u)
-
-          } else if len(vault.Users[u].LdapServer) > 0 {
-            ldap.DefaultTimeout = time.Second * 5
-            if l, err := ldap.DialURL(fmt.Sprintf("ldaps://%s", vault.Users[u].LdapServer), ldap.DialWithTLSConfig(&tls.Config{InsecureSkipVerify: args.insecure})); err == nil {
-              defer l.Close()
-    
-              if err := l.Bind(fmt.Sprintf("%s\\%s", vault.Users[u].LdapDomain, u), request.Password); err != nil {
+      if len(userRateLimits[key]) < args.rlimit[0] {
+        vaultMutex.RLock()
+        defer vaultMutex.RUnlock()
+  
+        if v, ok := vault.Users[u]; ok {
+          if !vault.Users[u].Disabled {
+            if len(vault.Users[u].Password) > 0 {
+              if !verifyPassword(request.Password, v.Password) {
+                userRateLimits[key] = append(userRateLimits[key], now)
+                http.Error(w, "Password Verification Failed", http.StatusUnauthorized)
+                return
+              }
+              expired = isUserExpired(u)
+  
+            } else if len(vault.Users[u].LdapServer) > 0 {
+              ldap.DefaultTimeout = time.Second * 5
+              if l, err := ldap.DialURL(fmt.Sprintf("ldaps://%s", vault.Users[u].LdapServer), ldap.DialWithTLSConfig(&tls.Config{InsecureSkipVerify: args.insecure})); err == nil {
+                defer l.Close()
+      
+                if err := l.Bind(fmt.Sprintf("%s\\%s", vault.Users[u].LdapDomain, u), request.Password); err != nil {
+                  userRateLimits[key] = append(userRateLimits[key], now)
+                  http.Error(w, err.Error(), http.StatusUnauthorized)
+                  return
+                }
+              } else {
                 userRateLimits[key] = append(userRateLimits[key], now)
                 http.Error(w, err.Error(), http.StatusUnauthorized)
                 return
               }
             } else {
-              userRateLimits[key] = append(userRateLimits[key], now)
-              http.Error(w, err.Error(), http.StatusUnauthorized)
+              http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
               return
             }
+  
+            delete(userRateLimits, key)
+    
+            authMutex.Lock()
+            defer authMutex.Unlock()
+    
+            t := uuid.NewString()
+  
+            authTokens[t] = &authToken {
+              user: u,
+              expires: time.Now().UTC().Add(args.idle),
+            }
+  
+            response := struct {
+              Token string `json:"token"`
+              Expired bool `json:"expired"`
+            } {
+              Token: t,
+              Expired: expired,
+            }
+    
+            w.Header().Set("Content-Type", "application/json")
+            w.WriteHeader(http.StatusOK)
+    
+            e := json.NewEncoder(w)
+            e.SetIndent("", "  ")
+            e.Encode(response)
+    
+            go func() {
+              authMutex.Lock()
+              defer authMutex.Unlock()
+    
+              for k, v := range authTokens {
+                if time.Now().UTC().After(v.expires) {
+                  delete(authTokens, k)
+                }
+              }
+            }()
           } else {
-            http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
-            return
+            http.Error(w, "User Disabled", http.StatusUnauthorized)
           }
         } else {
-          userRateLimits[key] = append(userRateLimits[key][1:], now)
-          http.Error(w, fmt.Sprintf("Too Many Failed Attempts (%d in %dm)", args.rlimit[0], args.rlimit[1]), http.StatusTooManyRequests)
-          return
+          userRateLimits[key] = append(userRateLimits[key], now)
+          http.Error(w, "Password Verification Failed", http.StatusUnauthorized)
         }
-
-        delete(userRateLimits, key)
-  
-        authMutex.Lock()
-        defer authMutex.Unlock()
-  
-        t := uuid.NewString()
-
-        authTokens[t] = &authToken {
-          user: u,
-          expires: time.Now().UTC().Add(args.idle),
-        }
-
-        response := struct {
-          Token string `json:"token"`
-          Expired bool `json:"expired"`
-        } {
-          Token: t,
-          Expired: expired,
-        }
-  
-        w.Header().Set("Content-Type", "application/json")
-        w.WriteHeader(http.StatusOK)
-  
-        e := json.NewEncoder(w)
-        e.SetIndent("", "  ")
-        e.Encode(response)
-  
-        go func() {
-          authMutex.Lock()
-          defer authMutex.Unlock()
-  
-          for k, v := range authTokens {
-            if time.Now().UTC().After(v.expires) {
-              delete(authTokens, k)
-            }
-          }
-        }()
-
       } else {
-        http.Error(w, "User Disabled", http.StatusUnauthorized)
+        userRateLimits[key] = append(userRateLimits[key][1:], now)
+        http.Error(w, fmt.Sprintf("Too Many Failed Attempts (%d in %dm)", args.rlimit[0], args.rlimit[1]), http.StatusTooManyRequests)
+        return
       }
     } else {
-      http.Error(w, "Password Verification Failed", http.StatusUnauthorized)
+      http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
     }
   } else {
     http.Error(w, err.Error(), http.StatusBadRequest)
@@ -581,7 +616,7 @@ func apiLogoutHandler(w http.ResponseWriter, r *http.Request) {
   vaultMutex.RLock()
   defer vaultMutex.RUnlock()
 
-  if _, ok, _ := isAuthenticated(w, r); ok {
+  if _, ok, _ := isAuthenticated(w, r, true); ok {
     authMutex.Lock()
     defer authMutex.Unlock()
 
@@ -597,7 +632,7 @@ func apiGetHandler(w http.ResponseWriter, r *http.Request) {
   vaultMutex.RLock()
   defer vaultMutex.RUnlock()
 
-  if ruser, ok, expired := isAuthenticated(w, r); ok {
+  if ruser, ok, expired := isAuthenticated(w, r, true); ok {
     if !expired {
       if r.URL.Path == "/audit" { // Get Audit Log
         if slices.Contains(vault.Users[ruser].Roles, "admin") {
@@ -697,7 +732,7 @@ func apiPostHandler(w http.ResponseWriter, r *http.Request) {
   vaultMutex.Lock()
   defer vaultMutex.Unlock()
 
-  if ruser, ok, expired := isAuthenticated(w, r); ok {
+  if ruser, ok, expired := isAuthenticated(w, r, true); ok {
     if m := regexp.MustCompile(`^/chpass$`).FindStringSubmatch(r.URL.Path); m != nil { // Change Password for UserPass User
       if len(vault.Users[ruser].Password) > 0 {
         var request struct {
@@ -1139,7 +1174,7 @@ func apiDeleteHandler(w http.ResponseWriter, r *http.Request) {
   vaultMutex.Lock()
   defer vaultMutex.Unlock()
 
-  if ruser, ok, expired := isAuthenticated(w, r); ok {
+  if ruser, ok, expired := isAuthenticated(w, r, true); ok {
     if !expired {
       if m := regexp.MustCompile(`^/namespace/(` + rNamespace + `)$`).FindStringSubmatch(r.URL.Path); m != nil { // Delete Namespace
         ns := strings.ToLower(m[1])

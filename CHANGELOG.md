@@ -3,6 +3,7 @@
 ### [v0.3.0] - In Development
 - Renamed `expires` to `expired` on login response to highlight expired users
 - Added internal groundwork for a web interface to manage JinjaFx Vault
+- Login rate limit now applies to remote host regardless of user
 - Added `debug.go` to enable debug builds to assist in development
 
 ### [v0.2.3] - September 10, 2026
