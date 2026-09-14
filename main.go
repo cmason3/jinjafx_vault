@@ -26,6 +26,8 @@ import (
   "flag"
   "sync"
   "bytes"
+  "embed"
+  "io/fs"
   "slices"
   "regexp"
   "context"
@@ -37,6 +39,7 @@ import (
   "crypto/tls"
   "crypto/rand"
   "crypto/cipher"
+  "html/template"
   "encoding/json"
   "encoding/binary"
   "golang.org/x/term"
@@ -47,11 +50,11 @@ import (
   "github.com/google/uuid"
 )
 
-const Version = "0.2.3"
+const Version = "0.3.0"
 
 var args struct {
   listen, tlsCrt, tlsKey string
-  tls, xff, insecure bool
+  tls, webui, xff, insecure bool
   idle time.Duration
   rlimit []int
   port int
@@ -97,6 +100,10 @@ var vaultCipher cipher.AEAD
 var vaultMutex sync.RWMutex
 var authMutex sync.RWMutex
 var rateMutex sync.Mutex
+var debug bool
+
+//go:embed www
+var www embed.FS
 
 type httpWriter struct {
   http.ResponseWriter
@@ -159,6 +166,35 @@ func logRequest(h http.Handler) http.HandlerFunc {
   }
 }
 
+func isUserExpired(u string) bool {
+  if len(vault.Users[u].Password) > 0 && vault.Users[u].LastChanged.IsZero() {
+    return true
+  }
+
+  if ln := len(vault.Users[u].Expiry); ln > 0 {
+    var d time.Duration
+    n, _ := strconv.Atoi(vault.Users[u].Expiry[ln-2:])
+  
+    switch vault.Users[u].Expiry[:ln-2] {
+      case "hr":
+        d = time.Duration(n) * time.Hour
+      case "dy":
+        d = time.Duration(n) * time.Hour * 24
+      case "wk":
+        d = time.Duration(n) * time.Hour * 24 * 7
+      case "mh":
+        d = time.Duration(n) * time.Hour * 24 * 30
+      case "yr":
+        d = time.Duration(n) * time.Hour * 24 * 365
+    }
+    
+    if time.Now().UTC().After(vault.Users[u].LastChanged.Add(d)) {
+      return true
+    }
+  }
+  return false
+}
+
 func isAuthenticated(w http.ResponseWriter, r *http.Request) (string, bool, bool) {
   authMutex.RLock()
   defer authMutex.RUnlock()
@@ -177,32 +213,7 @@ func isAuthenticated(w http.ResponseWriter, r *http.Request) (string, bool, bool
         }
       }(t)
 
-      if len(vault.Users[v.user].Password) > 0 && vault.Users[v.user].LastChanged.IsZero() {
-        return v.user, true, true
-      }
-
-      if ln := len(vault.Users[v.user].Expiry); ln > 0 {
-        var d time.Duration
-        n, _ := strconv.Atoi(vault.Users[v.user].Expiry[ln-2:])
-  
-        switch vault.Users[v.user].Expiry[:ln-2] {
-          case "hr":
-            d = time.Duration(n) * time.Hour
-          case "dy":
-            d = time.Duration(n) * time.Hour * 24
-          case "wk":
-            d = time.Duration(n) * time.Hour * 24 * 7
-          case "mh":
-            d = time.Duration(n) * time.Hour * 24 * 30
-          case "yr":
-            d = time.Duration(n) * time.Hour * 24 * 365
-        }
-        
-        if time.Now().UTC().After(vault.Users[v.user].LastChanged.Add(d)) {
-          return v.user, true, true
-        }
-      }
-      return v.user, true, false
+      return v.user, true, isUserExpired(v.user)
     }
   }
   return "", false, false
@@ -360,9 +371,63 @@ func getPasswordHash(password string) (string, error) {
   return base58.Encode(key), nil
 }
 
-func defaultHandler() http.HandlerFunc {
-  return func(w http.ResponseWriter, _ *http.Request) {
-    http.Error(w, http.StatusText(http.StatusNotFound), http.StatusNotFound)
+func wwwHandler(www fs.FS) http.HandlerFunc {
+  tfields := map[string]string {
+    "Version": ternary(debug, "0", Version),
+  }
+  return func(w http.ResponseWriter, r *http.Request) {
+    if r.Method == http.MethodGet {
+      var vURL bool
+
+      if r.URL.Path == "/" {
+        r.URL.Path = "/index.html"
+      }
+
+      if !debug && r.Header.Get("If-None-Match") == Version {
+        w.WriteHeader(http.StatusNotModified)
+        return
+      }
+
+      if strings.HasPrefix(r.URL.Path, fmt.Sprintf("/%s/", tfields["Version"])) {
+        r.URL.Path = strings.TrimPrefix(r.URL.Path[1:], tfields["Version"]); vURL = true
+      }
+
+      if b, err := fs.ReadFile(www, r.URL.Path[1:]); err == nil {
+        if strings.HasSuffix(r.URL.Path, ".html") {
+          if t, err := template.New(r.URL.Path).Parse(string(b)); err == nil {
+            var buf bytes.Buffer
+
+            if err = t.Execute(&buf, tfields); err == nil {
+              b = buf.Bytes()
+
+            } else {
+              http.Error(w, err.Error(), http.StatusInternalServerError)
+              return
+            }
+          } else {
+            http.Error(w, err.Error(), http.StatusInternalServerError)
+            return
+          }
+        }
+
+        if debug {
+          w.Header().Set("Cache-Control", "no-store")
+
+        } else if vURL {
+          w.Header().Set("Cache-Control", "max-age=31536000, immutable")
+
+        } else {
+          w.Header().Set("Cache-Control", "max-age=0, must-revalidate")
+          w.Header().Set("ETag", Version)
+        }
+        w.Write(b)
+
+      } else {
+        http.Error(w, http.StatusText(http.StatusNotFound), http.StatusNotFound)
+      }
+    } else {
+      http.Error(w, http.StatusText(http.StatusMethodNotAllowed), http.StatusMethodNotAllowed)
+    }
   }
 }
 
@@ -391,6 +456,8 @@ func apiHandler() http.HandlerFunc {
 }
 
 func apiLoginHandler(w http.ResponseWriter, r *http.Request) {
+  var expired bool
+
   var request struct {
     User string `json:"user"`
     Password string `json:"password"`
@@ -434,6 +501,8 @@ func apiLoginHandler(w http.ResponseWriter, r *http.Request) {
               http.Error(w, "Password Verification Failed", http.StatusUnauthorized)
               return
             }
+            expired = isUserExpired(u)
+
           } else if len(vault.Users[u].LdapServer) > 0 {
             ldap.DefaultTimeout = time.Second * 5
             if l, err := ldap.DialURL(fmt.Sprintf("ldaps://%s", vault.Users[u].LdapServer), ldap.DialWithTLSConfig(&tls.Config{InsecureSkipVerify: args.insecure})); err == nil {
@@ -473,10 +542,10 @@ func apiLoginHandler(w http.ResponseWriter, r *http.Request) {
 
         response := struct {
           Token string `json:"token"`
-          Expires time.Time `json:"expires"`
+          Expired bool `json:"expired"`
         } {
           Token: t,
-          Expires: authTokens[t].expires,
+          Expired: expired,
         }
   
         w.Header().Set("Content-Type", "application/json")
@@ -1305,7 +1374,7 @@ func main() {
   if _, defined := os.LookupEnv("JOURNAL_STREAM"); !defined {
     log.SetFlags(log.Flags() | log.Lmicroseconds)
 
-    fmt.Fprintf(os.Stdout, "JinjaFx Vault v%s\n", Version)
+    fmt.Fprintf(os.Stdout, "JinjaFx Vault v%s\n", ternary(debug, fmt.Sprintf("%s-DEBUG", Version), Version))
     fmt.Fprintf(os.Stdout, "URL https://github.com/cmason3/jinjafx_vault\n\n")
 
   } else {
@@ -1326,6 +1395,7 @@ func main() {
     fmt.Fprintf(os.Stderr, "  -tls                          Enable Transport Layer Security\n")
     fmt.Fprintf(os.Stderr, "   -tls.crt <vault.crt>         TLS Certificate Chain\n")
     fmt.Fprintf(os.Stderr, "   -tls.key <vault.key>         TLS Private Key\n")
+    // fmt.Fprintf(os.Stderr, "  -webui                        Enable Web Interface\n")
     fmt.Fprintf(os.Stderr, "  -xff                          Use X-Forwarded-For in Logs\n")
     fmt.Fprintf(os.Stderr, "  -k                            Allow Insecure LDAPS\n\n")
     fmt.Fprintf(os.Stderr, "Environment Variables:\n")
@@ -1385,6 +1455,7 @@ func main() {
   flag.BoolVar(&args.tls, "tls", false, "")
   flag.StringVar(&args.tlsCrt, "tls.crt", "", "")
   flag.StringVar(&args.tlsKey, "tls.key", "", "")
+  flag.BoolVar(&args.webui, "webui", false, "")
   flag.BoolVar(&args.xff, "xff", false, "")
   flag.BoolVar(&args.insecure, "k", false, "")
   flag.Parse()
@@ -1395,7 +1466,7 @@ func main() {
     os.Exit(1);
   }
 
-  if action == 1 { // -init
+  if action == 1 { // Inialise Vault
     vault.Users = make(map[string]*user)
     vault.Namespaces = make(map[string]map[string]*data)
     vault.Audit = make(map[time.Time]*audit)
@@ -1441,7 +1512,7 @@ func main() {
       fmt.Fprintf(os.Stderr, "Error: %v\n", err)
       os.Exit(1)
     }
-  } else if action == 2 { // -reset
+  } else if action == 2 { // Reset Vault
     if err := readVaultFile(false); err != nil {
       fmt.Fprintf(os.Stderr, "Error: %v\n", err)
       os.Exit(1)
@@ -1486,15 +1557,35 @@ func main() {
       fmt.Fprintf(os.Stderr, "Error: %v\n", err)
       os.Exit(1)
     }
-  } else if action == 4 { // -serve
+  } else if action == 4 { // Serve Vault
     if err := readVaultFile(true); err != nil {
       fmt.Fprintf(os.Stderr, "Error: %v\n", err)
       os.Exit(1)
     }
 
     mux := http.NewServeMux()
-    mux.Handle("/", defaultHandler())
     mux.Handle("/v1/", http.StripPrefix("/v1", apiHandler()))
+
+    if args.webui {
+      var wwwFs fs.FS
+      var err error
+
+      if debug {
+        wwwFs = os.DirFS("www/")
+
+      } else {
+        if wwwFs, err = fs.Sub(www, "www"); err != nil {
+          fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+          os.Exit(1)
+        }
+      }
+      mux.Handle("/", wwwHandler(wwwFs))
+
+    } else {
+      mux.HandleFunc("/", func(w http.ResponseWriter, _ *http.Request) {
+        http.Error(w, http.StatusText(http.StatusNotFound), http.StatusNotFound)
+      })
+    }
 
     sCtx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
     defer stop()

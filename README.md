@@ -332,7 +332,7 @@ There is also a JinjaFx Vault Ansible role that provides a similar `jinjafx_vaul
  ```json
  {
    "token": "6b5ee43f-8b0f-4189-9d65-d7e9bf4534da",
-   "expires": "2026-08-25T15:05:37.664964191Z"
+   "expired": false
  }
  ```
  <hr>

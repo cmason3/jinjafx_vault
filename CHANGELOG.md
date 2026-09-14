@@ -1,5 +1,8 @@
 ## CHANGELOG
 
+### [v0.3.0] - In Development
+- Added internal groundwork for a web interface to manage JinjaFx Vault
+
 ### [v0.2.3] - September 10, 2026
 - You can no longer delete a namespace unless it is empty
 
@@ -24,6 +27,7 @@
 - Initial release
 
 
+[v0.3.0]: https://github.com/cmason3/jinjafx_vault/compare/v0.2.3...v0.3.0
 [v0.2.3]: https://github.com/cmason3/jinjafx_vault/compare/v0.2.2...v0.2.3
 [v0.2.2]: https://github.com/cmason3/jinjafx_vault/compare/v0.2.1...v0.2.2
 [v0.2.1]: https://github.com/cmason3/jinjafx_vault/compare/v0.2.0...v0.2.1
