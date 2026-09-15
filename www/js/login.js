@@ -70,6 +70,7 @@
       }
     });
 
+    document.cookie = 'X-Vault-Token=; expires=Thu, 01 Jan 1970 00:00:00 UTC;';
     new bootstrap.Modal(document.getElementById('login'), { keyboard: false }).show();
   });
 })();

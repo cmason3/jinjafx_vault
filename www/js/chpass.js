@@ -45,7 +45,7 @@
 
       xHR.addEventListener('load', () => {
         if (xHR.status === 204) {
-          window.location.href = document.referrer;
+          window.location.href = '/login.html';
 
         } else {
           setStatus(xHR.responseText);
