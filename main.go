@@ -1309,21 +1309,25 @@ func apiDeleteHandler(w http.ResponseWriter, r *http.Request) {
           if u != "root" && ruser != u {
             if _, ok := vault.Users[u]; ok {
               if slices.Contains(vault.Users[u].Roles, role) {
-                vault.Users[u].Roles = slices.DeleteFunc(vault.Users[u].Roles, func(s string) bool {
-                  return s == role
-                })
+                if len(vault.Users[u].Roles) > 1 {
+                  vault.Users[u].Roles = slices.DeleteFunc(vault.Users[u].Roles, func(s string) bool {
+                    return s == role
+                  })
     
-                vault.Audit[time.Now().UTC()] = &audit {
-                  User: ruser,
-                  Address: w.(*httpWriter).remoteHost,
-                  Message: fmt.Sprintf("Removed Role '%s' from User '%s'", role, u),
-                }
+                  vault.Audit[time.Now().UTC()] = &audit {
+                    User: ruser,
+                    Address: w.(*httpWriter).remoteHost,
+                    Message: fmt.Sprintf("Removed Role '%s' from User '%s'", role, u),
+                  }
     
-                if err := writeVaultFile(false); err == nil {
-                  w.WriteHeader(http.StatusNoContent)
-    
+                  if err := writeVaultFile(false); err == nil {
+                    w.WriteHeader(http.StatusNoContent)
+      
+                  } else {
+                    http.Error(w, err.Error(), http.StatusInternalServerError)
+                  }
                 } else {
-                  http.Error(w, err.Error(), http.StatusInternalServerError)
+                  http.Error(w, "Not Enough Roles Left", http.StatusBadRequest)
                 }
               } else {
                 http.Error(w, "Role Not Found", http.StatusNotFound)

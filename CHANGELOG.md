@@ -5,6 +5,7 @@
 - Added internal groundwork for a web interface to manage JinjaFx Vault
 - Login rate limit now applies to remote host regardless of user
 - Added `debug.go` to enable debug builds to assist in development
+- You can no longer remove all roles from a user
 
 ### [v0.2.3] - September 10, 2026
 - You can no longer delete a namespace unless it is empty

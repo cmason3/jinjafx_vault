@@ -816,6 +816,7 @@ There is also a JinjaFx Vault Ansible role that provides a similar `jinjafx_vaul
  | Code | Response |
  | :-: | :-- |
  | 204 | Role Removed |
+ | 400 | Not Enough Roles Left |
  | 401 | Not Logged In |
  | 403 | Insufficient Privileges / Permission Denied |
  | 404 | User Not Found / Role Not Found |
