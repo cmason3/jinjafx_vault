@@ -13,35 +13,34 @@
 
     try {
       if (active == 'admin') {
-        let r = await fetch('/v1/users');
+        let r = await fetch('/v1/users', { signal: AbortSignal.timeout(5000) });
         if (r.status === 200) {
           let users = await r.json();
           content.innerHTML = '<pre>' + JSON.stringify(users, null, 2) + '</pre>';
 
         } else {
-          setStatus(r.statusText);
+          window.location.reload();
         }
       } else {
-        let r = await fetch('/v1/namespaces');
+        let r = await fetch('/v1/namespaces', { signal: AbortSignal.timeout(5000) });
         if (r.status === 200) {
           let namespaces = await r.json();
           let data = {};
 
           for (let ns in namespaces) {
-            let r = await fetch('/v1/data/' + ns);
+            let r = await fetch('/v1/data/' + ns, { signal: AbortSignal.timeout(5000) });
             if (r.status === 200) {
               let namespace = await r.json();
               data[ns] = namespace;
 
             } else {
-              setStatus(r.statusText);
-              return;
+              window.location.reload();
             }
           }
           content.innerHTML = '<pre>' + JSON.stringify(data, null, 2) + '</pre>';
 
         } else {
-          setStatus(r.statusText);
+          window.location.reload();
         }
       }
     } catch (error) {
@@ -71,7 +70,7 @@
 
     document.getElementById('logout').addEventListener('click', (e) => {
       try {
-        fetch('/v1/logout', { method: 'POST' }).then((r) => {
+        fetch('/v1/logout', { method: 'POST', signal: AbortSignal.timeout(5000) }).then((r) => {
           if (r.status === 204) {
             window.location.href = '/login.html';
 
@@ -86,7 +85,7 @@
     });
 
     try {
-      let r = await fetch('/v1/whoami');
+      let r = await fetch('/v1/whoami', { signal: AbortSignal.timeout(5000) });
       if (r.status === 200) {
         let obj = await r.json();
 
