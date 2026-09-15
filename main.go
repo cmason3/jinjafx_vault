@@ -15,8 +15,6 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
- // IF USER DOESN't EXIST for Login THEN it doesn't move to 429
-
 package main
 
 import (
@@ -299,7 +297,7 @@ func writeVaultFile(init bool) error {
 }
 
 func isPasswordValid(password string, old_password string) (bool, error) {
-  e := fmt.Errorf("password complexity mismatch - length >= 12; upper >= 1; lower >= 1; numeric >= 1; special >= 1; differences >= 4")
+  e := fmt.Errorf("Password Complexity Mismatch: Length >= 12; Upper >= 1; Lower >= 1; Numeric >= 1; Special >= 1; Differences >= 4")
 
   if len(password) >= 12 {
     if len(regexp.MustCompile(`[A-Z]`).FindAllStringIndex(password, -1)) < 1 {
@@ -346,7 +344,7 @@ func newRootPassword() (string, error) {
       return string(p), nil
 
     } else {
-      return "", fmt.Errorf("password verification failed")
+      return "", fmt.Errorf("Password Verification Failed")
     }
   } else {
     return "", err
@@ -403,8 +401,12 @@ func wwwHandler(www fs.FS) http.HandlerFunc {
         vaultMutex.RLock()
         defer vaultMutex.RUnlock()
        
-        if _, ok, _ := isAuthenticated(w, r, false); !ok && (r.URL.Path != "/login.html") {
+        if _, ok, expired := isAuthenticated(w, r, false); !ok && (r.URL.Path != "/login.html") {
           http.Redirect(w, r, "/login.html", http.StatusSeeOther)
+          return
+
+        } else if expired && (r.URL.Path != "/login.html") && (r.URL.Path != "/chpass.html") {
+          http.Redirect(w, r, "/chpass.html", http.StatusSeeOther)
           return
         }
       }
@@ -439,6 +441,8 @@ func wwwHandler(www fs.FS) http.HandlerFunc {
             w.Header().Set("Content-Type", "text/css; charset=utf-8")
           case ".js":
             w.Header().Set("Content-Type", "text/javascript; charset=utf-8")
+          case ".png":
+            w.Header().Set("Content-Type", "image/png")
         }
 
         if debug {
@@ -487,8 +491,6 @@ func apiHandler() http.HandlerFunc {
 }
 
 func apiLoginHandler(w http.ResponseWriter, r *http.Request) {
-  var expired bool
-
   var request struct {
     User string `json:"user"`
     Password string `json:"password"`
@@ -500,7 +502,6 @@ func apiLoginHandler(w http.ResponseWriter, r *http.Request) {
 
       u := strings.ToLower(request.User)
       w.(*httpWriter).remoteUser = u
-      // key := fmt.Sprintf("%s/%s", w.(*httpWriter).remoteHost, u)
       key := w.(*httpWriter).remoteHost
       now := time.Now().UTC()
   
@@ -533,8 +534,6 @@ func apiLoginHandler(w http.ResponseWriter, r *http.Request) {
                 http.Error(w, "Password Verification Failed", http.StatusUnauthorized)
                 return
               }
-              expired = isUserExpired(u)
-  
             } else if len(vault.Users[u].LdapServer) > 0 {
               ldap.DefaultTimeout = time.Second * 5
               if l, err := ldap.DialURL(fmt.Sprintf("ldaps://%s", vault.Users[u].LdapServer), ldap.DialWithTLSConfig(&tls.Config{InsecureSkipVerify: args.insecure})); err == nil {
@@ -569,10 +568,8 @@ func apiLoginHandler(w http.ResponseWriter, r *http.Request) {
   
             response := struct {
               Token string `json:"token"`
-              Expired bool `json:"expired"`
             } {
               Token: t,
-              Expired: expired,
             }
     
             w.Header().Set("Content-Type", "application/json")

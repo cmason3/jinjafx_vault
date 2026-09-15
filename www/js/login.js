@@ -5,17 +5,22 @@
     clearTimeout(tid);
     s = document.getElementById('status');
     s.innerHTML = message;
-    s.style.transition = "none";
-    s.style.opacity = 1;
-    tid = setTimeout(function() {
-      s.style.transition = "all 1.0s";
-      s.style.opacity = 0;
-    }, 4000);
+    let m = new bootstrap.Modal(document.getElementById('error'));
+    m.show();
+    tid = setTimeout(function() { m.hide() }, 4000);
   }
 
   window.addEventListener('load', (e) => {
     document.getElementById('login').addEventListener('shown.bs.modal', (e) => {
       document.getElementById('loginUser').focus();
+    });
+
+    document.getElementById('error').addEventListener('shown.bs.modal', (e) => {
+      document.getElementById('error').focus();
+    });
+
+    document.getElementById('error').addEventListener('hidden.bs.modal', (e) => {
+      document.getElementById('loginPassword').focus();
     });
 
     document.getElementById('submit').addEventListener('click', (e) => {
@@ -37,14 +42,12 @@
           window.location.href = '/index.html';
 
         } else {
-          setStatus('Error: ' + xHR.responseText);
-          document.getElementById('loginPassword').focus();
+          setStatus(xHR.responseText);
         }
       });
 
       xHR.addEventListener('error', () => {
-        setStatus('Error: XMLHttpRequest().onError()');
-        document.getElementById('loginPassword').focus();
+        setStatus('XMLHttpRequest().onError()');
       });
 
       request = {

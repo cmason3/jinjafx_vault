@@ -1,7 +1,7 @@
 ## CHANGELOG
 
 ### [v0.3.0] - In Development
-- Renamed `expires` to `expired` on login response to highlight expired users
+- Removed `expires` on login response as it was pointless being an idle timeout
 - Added internal groundwork for a web interface to manage JinjaFx Vault
 - Login rate limit now applies to remote host regardless of user
 - Added `debug.go` to enable debug builds to assist in development
