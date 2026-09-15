@@ -679,6 +679,22 @@ func apiGetHandler(w http.ResponseWriter, r *http.Request) {
         }
         e.Encode(ns)
 
+      } else if r.URL.Path == "/whoami" { // Who Am I?
+        response := struct {
+          User string `json:"user"`
+          Roles []string `json:"roles"`
+        } {
+          User: ruser,
+          Roles: vault.Users[ruser].Roles,
+        }
+    
+        w.Header().Set("Content-Type", "application/json")
+        w.WriteHeader(http.StatusOK)
+    
+        e := json.NewEncoder(w)
+        e.SetIndent("", "  ")
+        e.Encode(response)
+      
       } else if m := regexp.MustCompile(`^/data/(` + rNamespace + `)/(` + rVariable + `)$`).FindStringSubmatch(r.URL.Path); m != nil { // Get Namespace Variable
         ns := strings.ToLower(m[1])
         k := strings.ToLower(m[2])
