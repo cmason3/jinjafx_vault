@@ -1,5 +1,6 @@
 (() => {
   let tid = 0;
+  let timeout = 5000;
 
   function setStatus(message) {
     clearTimeout(tid);
@@ -41,37 +42,36 @@
         return;
       }
 
-      let xHR = new XMLHttpRequest();
+      try {
+        let request = {
+          'old_password': document.getElementById('loginPassword').value,
+          'password': document.getElementById('loginNewPassword').value
+        };
 
-      xHR.addEventListener('load', () => {
-        if (xHR.status === 204) {
-          window.location.href = '/login.html';
+        fetch('/v1/chpass', { method: 'POST', body: JSON.stringify(request), signal: AbortSignal.timeout(timeout) }).then((r) => {
+          if (r.status === 204) {
+            window.location.href = '/login.html';
 
-        } else {
-          setStatus(xHR.responseText);
-        }
-      });
+          } else {
+            r.text().then((msg) => {
+              setStatus(msg);
+            });
+          }
+        });
 
-      xHR.addEventListener('error', () => {
-        setStatus('XMLHttpRequest().onError()');
-      });
-
-      request = {
-        'old_password': document.getElementById('loginPassword').value,
-        'password': document.getElementById('loginNewPassword').value
+      } catch (error) {
+        setStatus(error);
       }
-      xHR.open('POST', '/v1/chpass');
-      xHR.send(JSON.stringify(request));
     });
 
     document.getElementById('loginPassword').addEventListener('keyup', (e) => {
-      if (e.key === 'Enter') {
+      if ((e.key === 'Enter') && (document.getElementById('loginPassword').value.trim().length !== 0)) {
         document.getElementById('loginNewPassword').focus();
       }
     });
 
     document.getElementById('loginNewPassword').addEventListener('keyup', (e) => {
-      if (e.key === 'Enter') {
+      if ((e.key === 'Enter') && (document.getElementById('loginNewPassword').value.trim().length !== 0)) {
         document.getElementById('loginVerifyPassword').focus();
       }
     });

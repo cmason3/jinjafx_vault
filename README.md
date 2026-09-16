@@ -189,8 +189,7 @@ There is also a JinjaFx Vault Ansible role that provides a similar `jinjafx_vaul
  ```json
  {
    "user": "root",
-   "roles": ["admin"],
-   "namespaces": []
+   "roles": ["admin"]
  }
  ```
  <hr>

@@ -1,8 +1,8 @@
 ## CHANGELOG
 
-### [v0.3.0] - In Development
+### [v0.3.0] - September 16, 2026
 - Removed `expires` on login response as it was pointless being an idle timeout
-- Added internal groundwork for a web interface to manage JinjaFx Vault
+- Added initial support (read-only) for a web interface to manage JinjaFx Vault
 - Login rate limit now applies to remote host regardless of user
 - Added `debug.go` to enable debug builds to assist in development
 - You can no longer remove all roles from a user

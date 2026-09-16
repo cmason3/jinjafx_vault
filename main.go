@@ -1447,7 +1447,7 @@ func main() {
     fmt.Fprintf(os.Stderr, "  -tls                          Enable Transport Layer Security\n")
     fmt.Fprintf(os.Stderr, "   -tls.crt <vault.crt>         TLS Certificate Chain\n")
     fmt.Fprintf(os.Stderr, "   -tls.key <vault.key>         TLS Private Key\n")
-    // fmt.Fprintf(os.Stderr, "  -webui                        Enable Web Interface\n")
+    fmt.Fprintf(os.Stderr, "  -webui                        Enable Web Interface\n")
     fmt.Fprintf(os.Stderr, "  -xff                          Use X-Forwarded-For in Logs\n")
     fmt.Fprintf(os.Stderr, "  -k                            Allow Insecure LDAPS\n\n")
     fmt.Fprintf(os.Stderr, "Environment Variables:\n")

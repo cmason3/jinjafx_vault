@@ -5,6 +5,7 @@
     <title>JinjaFx Vault</title>
     <link rel="icon" type="image/png" href="{{.Version}}/img/favicon.png" />
     <link rel="stylesheet" href="{{.Version}}/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="{{.Version}}/css/vault.css" />
   </head>
   <body>
     <nav class="navbar navbar-expand-lg p-0 bg-body-tertiary">
@@ -28,6 +29,19 @@
       </div>
     </nav>
     <div id="content" class="container-fluid p-2">
+    </div>
+    <div id="data" class="modal modal-lg fade" tabindex="-1">
+      <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 id="data-var" class="modal-title"></h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+          </div>
+          <div class="modal-body">
+            <pre id="data-value"></pre>
+          </div>
+        </div>
+      </div>
     </div>
     <div id="error" class="modal modal-lg fade" tabindex="-1">
       <div class="modal-dialog modal-dialog-centered">

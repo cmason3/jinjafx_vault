@@ -1,5 +1,6 @@
 (() => {
   let tid = 0;
+  let timeout = 5000;
 
   function setStatus(message) {
     clearTimeout(tid);
@@ -33,33 +34,30 @@
         return;
       }
 
-      let xHR = new XMLHttpRequest();
+      try {
+        let request = {
+          'user': document.getElementById('loginUser').value,
+          'password': document.getElementById('loginPassword').value
+        };
+        fetch('/v1/login', { method: 'POST', body: JSON.stringify(request), signal: AbortSignal.timeout(timeout) }).then((r) => {
+          if (r.status === 200) {
+            r.json().then((obj) => {
+              document.cookie = 'X-Vault-Token=' + obj.token;
+              window.location.href = '/index.html';
+            });
 
-      xHR.addEventListener('load', () => {
-        if (xHR.status === 200) {
-          let obj = JSON.parse(xHR.responseText);
-          document.cookie = 'X-Vault-Token=' + obj.token;
-          window.location.href = '/index.html';
+          } else {
+            setStatus(r.statusText);
+          }
+        });
 
-        } else {
-          setStatus(xHR.responseText);
-        }
-      });
-
-      xHR.addEventListener('error', () => {
-        setStatus('XMLHttpRequest().onError()');
-      });
-
-      request = {
-        'user': document.getElementById('loginUser').value,
-        'password': document.getElementById('loginPassword').value
+      } catch (error) {
+        setStatus(error);
       }
-      xHR.open('POST', '/v1/login');
-      xHR.send(JSON.stringify(request));
     });
 
     document.getElementById('loginUser').addEventListener('keyup', (e) => {
-      if (e.key === 'Enter') {
+      if ((e.key === 'Enter') && (document.getElementById('loginUser').value.trim().length !== 0)) {
         document.getElementById('loginPassword').focus();
       }
     });
