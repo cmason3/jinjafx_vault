@@ -402,11 +402,11 @@ func wwwHandler(www fs.FS) http.HandlerFunc {
         defer vaultMutex.RUnlock()
        
         if _, ok, expired := isAuthenticated(w, r, false); !ok && (r.URL.Path != "/login.html") {
-          http.Redirect(w, r, "/login.html", http.StatusSeeOther)
+          http.Redirect(w, r, "login.html", http.StatusSeeOther)
           return
 
         } else if expired && (r.URL.Path != "/login.html") && (r.URL.Path != "/chpass.html") {
-          http.Redirect(w, r, "/chpass.html", http.StatusSeeOther)
+          http.Redirect(w, r, "chpass.html", http.StatusSeeOther)
           return
         }
       }

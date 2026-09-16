@@ -50,7 +50,7 @@
 
         fetch('/v1/chpass', { method: 'POST', body: JSON.stringify(request), signal: AbortSignal.timeout(timeout) }).then((r) => {
           if (r.status === 204) {
-            window.location.href = '/login.html';
+            window.location.href = 'login.html';
 
           } else {
             r.text().then((msg) => {

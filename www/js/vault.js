@@ -113,7 +113,7 @@
       try {
         fetch('/v1/logout', { method: 'POST', signal: AbortSignal.timeout(timeout) }).then((r) => {
           if (r.status === 204) {
-            window.location.href = '/login.html';
+            window.location.href = 'login.html';
 
           } else {
             setStatus(r.statusText);
