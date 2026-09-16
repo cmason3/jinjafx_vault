@@ -43,7 +43,7 @@
           if (r.status === 200) {
             r.json().then((obj) => {
               document.cookie = 'X-Vault-Token=' + obj.token;
-              window.location.href = 'index.html';
+              window.location.href = './index.html';
             });
 
           } else {
