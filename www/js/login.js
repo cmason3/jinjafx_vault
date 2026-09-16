@@ -39,7 +39,7 @@
           'user': document.getElementById('loginUser').value,
           'password': document.getElementById('loginPassword').value
         };
-        fetch('/v1/login', { method: 'POST', body: JSON.stringify(request), signal: AbortSignal.timeout(timeout) }).then((r) => {
+        fetch('v1/login', { method: 'POST', body: JSON.stringify(request), signal: AbortSignal.timeout(timeout) }).then((r) => {
           if (r.status === 200) {
             r.json().then((obj) => {
               document.cookie = 'X-Vault-Token=' + obj.token;
