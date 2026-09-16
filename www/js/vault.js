@@ -116,7 +116,9 @@
             window.location.href = 'login.html';
 
           } else {
-            setStatus(r.statusText);
+            r.text().then((msg) => {
+              setStatus('<b>HTTP ' + r.status + '</b> ' + msg);
+            });
           }
         });
 
@@ -129,7 +131,6 @@
       fetch('v1/whoami', { signal: AbortSignal.timeout(timeout) }).then((r) => {
         if (r.status === 200) {
           r.json().then((obj) => {
-
             if (obj.roles.includes('admin')) {
               document.getElementById('admin').classList.add('active');
               active = 'admin';
@@ -146,7 +147,9 @@
           });
 
         } else {
-          setStatus(r.statusText);
+          r.text().then((msg) => {
+            setStatus('<b>HTTP ' + r.status + '</b> ' + msg);
+          });
         }
       });
 

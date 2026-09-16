@@ -47,7 +47,9 @@
             });
 
           } else {
-            setStatus(r.statusText);
+            r.text().then((msg) => {
+              setStatus('<b>HTTP ' + r.status + '</b> ' + msg);
+            });
           }
         });
 

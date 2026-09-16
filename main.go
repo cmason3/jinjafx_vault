@@ -51,7 +51,7 @@ import (
   "github.com/google/uuid"
 )
 
-const Version = "0.3.0"
+const Version = "0.3.1"
 
 var args struct {
   listen, tlsCrt, tlsKey string
@@ -175,7 +175,7 @@ func isUserExpired(u string) bool {
   if ln := len(vault.Users[u].Expiry); ln > 0 {
     var d time.Duration
     n, _ := strconv.Atoi(vault.Users[u].Expiry[ln-2:])
-  
+
     switch vault.Users[u].Expiry[:ln-2] {
       case "hr":
         d = time.Duration(n) * time.Hour
@@ -188,7 +188,7 @@ func isUserExpired(u string) bool {
       case "yr":
         d = time.Duration(n) * time.Hour * 24 * 365
     }
-    
+
     if time.Now().UTC().After(vault.Users[u].LastChanged.Add(d)) {
       return true
     }
@@ -400,7 +400,7 @@ func wwwHandler(www fs.FS) http.HandlerFunc {
       if strings.HasSuffix(r.URL.Path, ".html") {
         vaultMutex.RLock()
         defer vaultMutex.RUnlock()
-       
+
         if _, ok, expired := isAuthenticated(w, r, false); !ok && (r.URL.Path != "/login.html") {
           w.Header().Set("Location", "login.html")
           w.WriteHeader(http.StatusFound)
@@ -506,16 +506,16 @@ func apiLoginHandler(w http.ResponseWriter, r *http.Request) {
       w.(*httpWriter).remoteUser = u
       key := w.(*httpWriter).remoteHost
       now := time.Now().UTC()
-  
+
       rateMutex.Lock()
       defer rateMutex.Unlock()
-  
+
       if _, exists := userRateLimits[key]; !exists {
         userRateLimits[key] = make([]time.Time, 0)
-  
+
       } else {
         cutoff := now.Add(-(time.Duration(args.rlimit[1]) * time.Minute))
-  
+
         for ; i < len(userRateLimits[key]); i++ {
           if userRateLimits[key][i].After(cutoff) {
             userRateLimits[key] = userRateLimits[key][i:]
@@ -527,7 +527,7 @@ func apiLoginHandler(w http.ResponseWriter, r *http.Request) {
       if len(userRateLimits[key]) < args.rlimit[0] {
         vaultMutex.RLock()
         defer vaultMutex.RUnlock()
-  
+
         if v, ok := vault.Users[u]; ok {
           if !vault.Users[u].Disabled {
             if len(vault.Users[u].Password) > 0 {
@@ -540,7 +540,7 @@ func apiLoginHandler(w http.ResponseWriter, r *http.Request) {
               ldap.DefaultTimeout = time.Second * 5
               if l, err := ldap.DialURL(fmt.Sprintf("ldaps://%s", vault.Users[u].LdapServer), ldap.DialWithTLSConfig(&tls.Config{InsecureSkipVerify: args.insecure})); err == nil {
                 defer l.Close()
-      
+
                 if err := l.Bind(fmt.Sprintf("%s\\%s", vault.Users[u].LdapDomain, u), request.Password); err != nil {
                   userRateLimits[key] = append(userRateLimits[key], now)
                   http.Error(w, err.Error(), http.StatusUnauthorized)
@@ -555,36 +555,36 @@ func apiLoginHandler(w http.ResponseWriter, r *http.Request) {
               http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
               return
             }
-  
+
             delete(userRateLimits, key)
-    
+
             authMutex.Lock()
             defer authMutex.Unlock()
-    
+
             t := uuid.NewString()
-  
+
             authTokens[t] = &authToken {
               user: u,
               expires: time.Now().UTC().Add(args.idle),
             }
-  
+
             response := struct {
               Token string `json:"token"`
             } {
               Token: t,
             }
-    
+
             w.Header().Set("Content-Type", "application/json")
             w.WriteHeader(http.StatusOK)
-    
+
             e := json.NewEncoder(w)
             e.SetIndent("", "  ")
             e.Encode(response)
-    
+
             go func() {
               authMutex.Lock()
               defer authMutex.Unlock()
-    
+
               for k, v := range authTokens {
                 if time.Now().UTC().After(v.expires) {
                   delete(authTokens, k)
@@ -638,11 +638,11 @@ func apiGetHandler(w http.ResponseWriter, r *http.Request) {
           w.Header().Set("Cache-Control", "no-store")
           w.Header().Set("Content-Type", "application/json")
           w.WriteHeader(http.StatusOK)
-  
+
           e := json.NewEncoder(w)
           e.SetIndent("", "  ")
           e.Encode(vault.Audit)
-  
+
         } else {
           http.Error(w, "Insufficient Privileges", http.StatusForbidden)
         }
@@ -650,23 +650,23 @@ func apiGetHandler(w http.ResponseWriter, r *http.Request) {
         if slices.Contains(vault.Users[ruser].Roles, "admin") {
           w.Header().Set("Content-Type", "application/json")
           w.WriteHeader(http.StatusOK)
-  
+
           e := json.NewEncoder(w)
           e.SetIndent("", "  ")
           e.Encode(vault.Users)
-  
+
         } else {
           http.Error(w, "Insufficient Privileges", http.StatusForbidden)
         }
       } else if r.URL.Path == "/namespaces" { // Get Namespaces
         var ns = make(map[string]string)
-  
+
         w.Header().Set("Content-Type", "application/json")
         w.WriteHeader(http.StatusOK)
-  
+
         e := json.NewEncoder(w)
         e.SetIndent("", "  ")
-  
+
         if slices.Contains(vault.Users[ruser].Roles, "admin") {
           for k := range vault.Namespaces {
             if p, exists := vault.Users[ruser].Namespaces[k]; exists {
@@ -689,28 +689,28 @@ func apiGetHandler(w http.ResponseWriter, r *http.Request) {
           User: ruser,
           Roles: vault.Users[ruser].Roles,
         }
-    
+
         w.Header().Set("Content-Type", "application/json")
         w.WriteHeader(http.StatusOK)
-    
+
         e := json.NewEncoder(w)
         e.SetIndent("", "  ")
         e.Encode(response)
-      
+
       } else if m := regexp.MustCompile(`^/data/(` + rNamespace + `)/(` + rVariable + `)$`).FindStringSubmatch(r.URL.Path); m != nil { // Get Namespace Variable
         ns := strings.ToLower(m[1])
         k := strings.ToLower(m[2])
-  
+
         if _, ok := vault.Users[ruser].Namespaces[ns]; ok {
           if v, ok := vault.Namespaces[ns][k]; ok {
             w.Header().Set("Cache-Control", "no-store")
             w.Header().Set("Content-Type", "application/json")
             w.WriteHeader(http.StatusOK)
-  
+
             e := json.NewEncoder(w)
             e.SetIndent("", "  ")
             e.Encode(v)
-  
+
           } else {
             http.Error(w, "Variable Not Found", http.StatusNotFound)
           }
@@ -719,16 +719,16 @@ func apiGetHandler(w http.ResponseWriter, r *http.Request) {
         }
       } else if m := regexp.MustCompile(`^/data/(` + rNamespace + `)$`).FindStringSubmatch(r.URL.Path); m != nil { // Get Namespace Variables
         ns := strings.ToLower(m[1])
-  
+
         if _, ok := vault.Users[ruser].Namespaces[ns]; ok {
           w.Header().Set("Cache-Control", "no-store")
           w.Header().Set("Content-Type", "application/json")
           w.WriteHeader(http.StatusOK)
-  
+
           e := json.NewEncoder(w)
           e.SetIndent("", "  ")
           e.Encode(vault.Namespaces[ns])
-  
+
         } else {
           http.Error(w, http.StatusText(http.StatusForbidden), http.StatusForbidden)
         }
@@ -754,23 +754,23 @@ func apiPostHandler(w http.ResponseWriter, r *http.Request) {
           OldPassword string `json:"old_password"`
           Password string `json:"password"`
         }
-  
+
         if err := json.NewDecoder(r.Body).Decode(&request); err == nil {
           if verifyPassword(request.OldPassword, vault.Users[ruser].Password) {
             if ok, err := isPasswordValid(request.Password, request.OldPassword); ok {
               if h, err := getPasswordHash(request.Password); err == nil {
                 vault.Users[ruser].Password = h
                 vault.Users[ruser].LastChanged = time.Now().UTC()
-  
+
                 vault.Audit[time.Now().UTC()] = &audit {
                   User: ruser,
                   Address: w.(*httpWriter).remoteHost,
                   Message: fmt.Sprintf("User Changed Password"),
                 }
-  
+
                 if err := writeVaultFile(false); err == nil {
                   w.WriteHeader(http.StatusNoContent)
-  
+
                 } else {
                   http.Error(w, err.Error(), http.StatusInternalServerError)
                 }
@@ -792,20 +792,20 @@ func apiPostHandler(w http.ResponseWriter, r *http.Request) {
     } else if !expired {
       if m := regexp.MustCompile(`^/namespace/(` + rNamespace + `)$`).FindStringSubmatch(r.URL.Path); m != nil { // Create Namespace
         ns := strings.ToLower(m[1])
-  
+
         if slices.Contains(vault.Users[ruser].Roles, "admin") {
           if _, ok := vault.Namespaces[ns]; !ok {
             vault.Namespaces[ns] = make(map[string]*data)
-  
+
             vault.Audit[time.Now().UTC()] = &audit {
               User: ruser,
               Address: w.(*httpWriter).remoteHost,
               Message: fmt.Sprintf("Created Namespace '%s'", ns),
             }
-  
+
             if err := writeVaultFile(false); err == nil {
               w.WriteHeader(http.StatusCreated)
-  
+
             } else {
               http.Error(w, err.Error(), http.StatusInternalServerError)
             }
@@ -817,18 +817,18 @@ func apiPostHandler(w http.ResponseWriter, r *http.Request) {
         }
       } else if m := regexp.MustCompile(`^/user/(` + rUser + `)/userpass$`).FindStringSubmatch(r.URL.Path); m != nil { // Create or Update UserPass User
         u := strings.ToLower(m[1])
-  
+
         if slices.Contains(vault.Users[ruser].Roles, "admin") {
           var request struct {
             Password string `json:"password"`
           }
-  
+
           if err := json.NewDecoder(r.Body).Decode(&request); err == nil {
             if len(request.Password) > 0 {
               if ok, err := isPasswordValid(request.Password, ""); ok {
                 if h, err := getPasswordHash(request.Password); err == nil {
                   var cflag int
-  
+
                   if _, ok := vault.Users[u]; !ok {
                     vault.Users[u] = &user {
                       Roles: []string{"user"},
@@ -836,9 +836,9 @@ func apiPostHandler(w http.ResponseWriter, r *http.Request) {
                       LastChanged: time.Now().UTC(),
                       Namespaces: make(map[string]string),
                     }
-  
+
                     cflag = 1
-  
+
                   } else if len(vault.Users[u].Password) > 0 {
                     if !verifyPassword(request.Password, vault.Users[u].Password) {
                       vault.Users[u].Password = h
@@ -849,17 +849,17 @@ func apiPostHandler(w http.ResponseWriter, r *http.Request) {
                     http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
                     return
                   }
-  
+
                   if cflag > 0 {
                     vault.Audit[time.Now().UTC()] = &audit {
                       User: ruser,
                       Address: w.(*httpWriter).remoteHost,
                       Message: fmt.Sprintf("%s UserPass User '%s'", ternary(cflag == 1, "Created", "Updated"), u),
                     }
-  
+
                     if err := writeVaultFile(false); err == nil {
                       w.WriteHeader(ternary(cflag == 1, http.StatusCreated, http.StatusNoContent))
-  
+
                     } else {
                       http.Error(w, err.Error(), http.StatusInternalServerError)
                     }
@@ -883,17 +883,17 @@ func apiPostHandler(w http.ResponseWriter, r *http.Request) {
         }
       } else if m := regexp.MustCompile(`^/user/(` + rUser + `)/ldaps$`).FindStringSubmatch(r.URL.Path); m != nil { // Create or Update LDAP User
         u := strings.ToLower(m[1])
-  
+
         if slices.Contains(vault.Users[ruser].Roles, "admin") {
           var request struct {
             LdapServer string `json:"ldap_server"`
             LdapDomain string `json:"ldap_domain"`
           }
-  
+
           if err := json.NewDecoder(r.Body).Decode(&request); err == nil {
             if (len(request.LdapServer) > 0) && (len(request.LdapDomain) > 0) {
               var cflag int
-  
+
               if _, ok := vault.Users[u]; !ok {
                 vault.Users[u] = &user {
                   Roles: []string{"user"},
@@ -901,15 +901,15 @@ func apiPostHandler(w http.ResponseWriter, r *http.Request) {
                   LdapDomain: request.LdapDomain,
                   Namespaces: make(map[string]string),
                 }
-  
+
                 cflag = 1
-  
+
               } else if len(vault.Users[u].LdapServer) > 0 {
                 if vault.Users[u].LdapServer != request.LdapServer {
                   vault.Users[u].LdapServer = request.LdapServer
                   cflag = 2
                 }
-  
+
                 if vault.Users[u].LdapDomain != request.LdapDomain {
                  vault.Users[u].LdapDomain = request.LdapDomain
                   cflag = 2
@@ -918,17 +918,17 @@ func apiPostHandler(w http.ResponseWriter, r *http.Request) {
                 http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
                 return
               }
-  
+
               if cflag > 0 {
                 vault.Audit[time.Now().UTC()] = &audit {
                   User: ruser,
                   Address: w.(*httpWriter).remoteHost,
                   Message: fmt.Sprintf("%s LDAP User '%s'", ternary(cflag == 1, "Created", "Updated"), u),
                 }
-  
+
                 if err := writeVaultFile(false); err == nil {
                   w.WriteHeader(ternary(cflag == 1, http.StatusCreated, http.StatusNoContent))
-  
+
                 } else {
                   http.Error(w, err.Error(), http.StatusInternalServerError)
                 }
@@ -946,7 +946,7 @@ func apiPostHandler(w http.ResponseWriter, r *http.Request) {
         }
       } else if m := regexp.MustCompile(`^/user/(` + rUser + `)/chage/([1-9][0-9]*)(hr|dy|wk|mh|yr)$`).FindStringSubmatch(r.URL.Path); m != nil { // Set Expiration for UserPass User
         u := strings.ToLower(m[1])
-  
+
         if slices.Contains(vault.Users[ruser].Roles, "admin") {
           if _, ok := vault.Users[u]; ok {
             if len(vault.Users[u].Password) > 0 {
@@ -954,16 +954,16 @@ func apiPostHandler(w http.ResponseWriter, r *http.Request) {
 
               if vault.Users[u].Expiry != d {
                 vault.Users[u].Expiry = d
-  
+
                 vault.Audit[time.Now().UTC()] = &audit {
                   User: ruser,
                   Address: w.(*httpWriter).remoteHost,
                   Message: fmt.Sprintf("Set Expiration for User '%s' to '%s'", u, d),
                 }
-  
+
                 if err := writeVaultFile(false); err == nil {
                   w.WriteHeader(http.StatusNoContent)
-  
+
                 } else {
                   http.Error(w, err.Error(), http.StatusInternalServerError)
                 }
@@ -981,23 +981,23 @@ func apiPostHandler(w http.ResponseWriter, r *http.Request) {
         }
       } else if m := regexp.MustCompile(`^/user/(` + rUser + `)/expire$`).FindStringSubmatch(r.URL.Path); m != nil { // Force Password Change for UserPass User
         u := strings.ToLower(m[1])
-  
+
         if slices.Contains(vault.Users[ruser].Roles, "admin") {
           if ruser != u {
             if _, ok := vault.Users[u]; ok {
               if len(vault.Users[u].Password) > 0 {
                 if !vault.Users[u].LastChanged.IsZero() {
                   vault.Users[u].LastChanged = time.Time{}
-  
+
                   vault.Audit[time.Now().UTC()] = &audit {
                     User: ruser,
                     Address: w.(*httpWriter).remoteHost,
                     Message: fmt.Sprintf("Forced Password Change for User '%s'", u),
                   }
-  
+
                   if err := writeVaultFile(false); err == nil {
                     w.WriteHeader(http.StatusNoContent)
-  
+
                   } else {
                     http.Error(w, err.Error(), http.StatusInternalServerError)
                   }
@@ -1018,22 +1018,22 @@ func apiPostHandler(w http.ResponseWriter, r *http.Request) {
         }
       } else if m := regexp.MustCompile(`^/user/(` + rUser + `)/disabled$`).FindStringSubmatch(r.URL.Path); m != nil { // Disable User
         u := strings.ToLower(m[1])
-  
+
         if slices.Contains(vault.Users[ruser].Roles, "admin") {
           if ruser != u {
             if _, ok := vault.Users[u]; ok {
               if !vault.Users[u].Disabled {
                 vault.Users[u].Disabled = true
-  
+
                 vault.Audit[time.Now().UTC()] = &audit {
                   User: ruser,
                   Address: w.(*httpWriter).remoteHost,
                   Message: fmt.Sprintf("Disabled User '%s'", u),
                 }
-  
+
                 if err := writeVaultFile(false); err == nil {
                   w.WriteHeader(http.StatusNoContent)
-  
+
                 } else {
                   http.Error(w, err.Error(), http.StatusInternalServerError)
                 }
@@ -1052,22 +1052,22 @@ func apiPostHandler(w http.ResponseWriter, r *http.Request) {
       } else if m := regexp.MustCompile(`^/user/(` + rUser + `)/roles/(admin|user)$`).FindStringSubmatch(r.URL.Path); m != nil { // Assign Role to User
         u := strings.ToLower(m[1])
         role := strings.ToLower(m[2])
-  
+
         if slices.Contains(vault.Users[ruser].Roles, "admin") {
           if u != "root" && ruser != u {
             if _, ok := vault.Users[u]; ok {
               if !slices.Contains(vault.Users[u].Roles, role) {
                 vault.Users[u].Roles = append(vault.Users[u].Roles, role)
-    
+
                 vault.Audit[time.Now().UTC()] = &audit {
                   User: ruser,
                   Address: w.(*httpWriter).remoteHost,
                   Message: fmt.Sprintf("Assigned Role '%s' to User '%s'", role, u),
                 }
-    
+
                 if err := writeVaultFile(false); err == nil {
                   w.WriteHeader(http.StatusNoContent)
-    
+
                 } else {
                   http.Error(w, err.Error(), http.StatusInternalServerError)
                 }
@@ -1086,23 +1086,23 @@ func apiPostHandler(w http.ResponseWriter, r *http.Request) {
       } else if m := regexp.MustCompile(`^/user/(` + rUser + `)/namespaces/(` + rNamespace + `)/(r[ow])$`).FindStringSubmatch(r.URL.Path); m != nil { // Assign User to Namespace
         u := strings.ToLower(m[1])
         ns := strings.ToLower(m[2])
-  
+
         if slices.Contains(vault.Users[ruser].Roles, "admin") {
           if u != "root" {
             if _, ok := vault.Users[u]; ok {
               if _, ok := vault.Namespaces[ns]; ok {
                 if p, ok := vault.Users[u].Namespaces[ns]; !ok || (p != m[3]) {
                   vault.Users[u].Namespaces[ns] = m[3]
-  
+
                   vault.Audit[time.Now().UTC()] = &audit {
                     User: ruser,
                     Address: w.(*httpWriter).remoteHost,
                     Message: fmt.Sprintf("Assigned User '%s' to Namespace '%s' as '%s'", u, ns, m[3]),
                   }
-  
+
                   if err := writeVaultFile(false); err == nil {
                     w.WriteHeader(http.StatusNoContent)
-  
+
                   } else {
                     http.Error(w, err.Error(), http.StatusInternalServerError)
                   }
@@ -1124,16 +1124,16 @@ func apiPostHandler(w http.ResponseWriter, r *http.Request) {
       } else if m := regexp.MustCompile(`^/data/(` + rNamespace + `)/(` + rVariable + `)$`).FindStringSubmatch(r.URL.Path); m != nil { // Create or Update Namespace Variable
         ns := strings.ToLower(m[1])
         k := strings.ToLower(m[2])
-  
+
         if v, ok := vault.Users[ruser].Namespaces[ns]; ok && v == "rw" {
           var request data
-  
+
           if err := json.NewDecoder(r.Body).Decode(&request); err == nil {
             vault.Namespaces[ns][k] = &request
-  
+
             if err := writeVaultFile(false); err == nil {
               w.WriteHeader(http.StatusNoContent)
-  
+
             } else {
               http.Error(w, err.Error(), http.StatusInternalServerError)
             }
@@ -1145,10 +1145,10 @@ func apiPostHandler(w http.ResponseWriter, r *http.Request) {
         }
       } else if m := regexp.MustCompile(`^/data/(` + rNamespace + `)$`).FindStringSubmatch(r.URL.Path); m != nil { // Create or Update Namespace Variables
         ns := strings.ToLower(m[1])
-  
+
         if v, ok := vault.Users[ruser].Namespaces[ns]; ok && v == "rw" {
           var request map[string]*data
-  
+
           if err := json.NewDecoder(r.Body).Decode(&request); err == nil {
             for k := range request {
               if !regexp.MustCompile(`^` + rVariable + `$`).MatchString(k) {
@@ -1161,10 +1161,10 @@ func apiPostHandler(w http.ResponseWriter, r *http.Request) {
                 Data: request[k].Data,
               }
             }
-  
+
             if err := writeVaultFile(false); err == nil {
               w.WriteHeader(http.StatusNoContent)
-  
+
             } else {
               http.Error(w, err.Error(), http.StatusInternalServerError)
             }
@@ -1193,25 +1193,25 @@ func apiDeleteHandler(w http.ResponseWriter, r *http.Request) {
     if !expired {
       if m := regexp.MustCompile(`^/namespace/(` + rNamespace + `)$`).FindStringSubmatch(r.URL.Path); m != nil { // Delete Namespace
         ns := strings.ToLower(m[1])
-  
+
         if slices.Contains(vault.Users[ruser].Roles, "admin") {
           if _, ok := vault.Namespaces[ns]; ok {
             if len(vault.Namespaces[ns]) == 0 {
               delete(vault.Namespaces, ns)
-  
+
               for _, v := range vault.Users {
                 delete(v.Namespaces, ns)
               }
-  
+
               vault.Audit[time.Now().UTC()] = &audit {
                 User: ruser,
                 Address: w.(*httpWriter).remoteHost,
                 Message: fmt.Sprintf("Deleted Namespace '%s'", ns),
               }
-  
+
               if err := writeVaultFile(false); err == nil {
                 w.WriteHeader(http.StatusNoContent)
-  
+
               } else {
                 http.Error(w, err.Error(), http.StatusInternalServerError)
               }
@@ -1226,21 +1226,21 @@ func apiDeleteHandler(w http.ResponseWriter, r *http.Request) {
         }
       } else if m := regexp.MustCompile(`^/user/(` + rUser + `)$`).FindStringSubmatch(r.URL.Path); m != nil { // Delete User
         u := strings.ToLower(m[1])
-  
+
         if slices.Contains(vault.Users[ruser].Roles, "admin") {
           if u != "root" && ruser != u {
             if _, ok := vault.Users[u]; ok {
               delete(vault.Users, u)
-  
+
               vault.Audit[time.Now().UTC()] = &audit {
                 User: ruser,
                 Address: w.(*httpWriter).remoteHost,
                 Message: fmt.Sprintf("Deleted User '%s'", u),
               }
-  
+
               if err := writeVaultFile(false); err == nil {
                 w.WriteHeader(http.StatusNoContent)
-  
+
               } else {
                 http.Error(w, err.Error(), http.StatusInternalServerError)
               }
@@ -1255,22 +1255,22 @@ func apiDeleteHandler(w http.ResponseWriter, r *http.Request) {
         }
       } else if m := regexp.MustCompile(`^/user/(` + rUser + `)/chage$`).FindStringSubmatch(r.URL.Path); m != nil { // Clear Expiration for UserPass User
         u := strings.ToLower(m[1])
-  
+
         if slices.Contains(vault.Users[ruser].Roles, "admin") {
           if _, ok := vault.Users[u]; ok {
             if len(vault.Users[u].Password) > 0 {
               if len(vault.Users[u].Expiry) > 0 {
                 vault.Users[u].Expiry = ""
-  
+
                 vault.Audit[time.Now().UTC()] = &audit {
                   User: ruser,
                   Address: w.(*httpWriter).remoteHost,
                   Message: fmt.Sprintf("Cleared Expiration for User '%s'", u),
                 }
-  
+
                 if err := writeVaultFile(false); err == nil {
                   w.WriteHeader(http.StatusNoContent)
-  
+
                 } else {
                   http.Error(w, err.Error(), http.StatusInternalServerError)
                 }
@@ -1288,22 +1288,22 @@ func apiDeleteHandler(w http.ResponseWriter, r *http.Request) {
         }
       } else if m := regexp.MustCompile(`^/user/(` + rUser + `)/disabled$`).FindStringSubmatch(r.URL.Path); m != nil { // Enable User
         u := strings.ToLower(m[1])
-  
+
         if slices.Contains(vault.Users[ruser].Roles, "admin") {
           if ruser != u {
             if _, ok := vault.Users[u]; ok {
               if vault.Users[u].Disabled {
                 vault.Users[u].Disabled = false
-  
+
                 vault.Audit[time.Now().UTC()] = &audit {
                   User: ruser,
                   Address: w.(*httpWriter).remoteHost,
                   Message: fmt.Sprintf("Enabled User '%s'", u),
                 }
-  
+
                 if err := writeVaultFile(false); err == nil {
                   w.WriteHeader(http.StatusNoContent)
-  
+
                 } else {
                   http.Error(w, err.Error(), http.StatusInternalServerError)
                 }
@@ -1322,7 +1322,7 @@ func apiDeleteHandler(w http.ResponseWriter, r *http.Request) {
       } else if m := regexp.MustCompile(`^/user/(` + rUser +`)/roles/(admin|user)$`).FindStringSubmatch(r.URL.Path); m != nil { // Remove Role from User
         u := strings.ToLower(m[1])
         role := strings.ToLower(m[2])
-  
+
         if slices.Contains(vault.Users[ruser].Roles, "admin") {
           if u != "root" && ruser != u {
             if _, ok := vault.Users[u]; ok {
@@ -1331,16 +1331,16 @@ func apiDeleteHandler(w http.ResponseWriter, r *http.Request) {
                   vault.Users[u].Roles = slices.DeleteFunc(vault.Users[u].Roles, func(s string) bool {
                     return s == role
                   })
-    
+
                   vault.Audit[time.Now().UTC()] = &audit {
                     User: ruser,
                     Address: w.(*httpWriter).remoteHost,
                     Message: fmt.Sprintf("Removed Role '%s' from User '%s'", role, u),
                   }
-    
+
                   if err := writeVaultFile(false); err == nil {
                     w.WriteHeader(http.StatusNoContent)
-      
+
                   } else {
                     http.Error(w, err.Error(), http.StatusInternalServerError)
                   }
@@ -1362,22 +1362,22 @@ func apiDeleteHandler(w http.ResponseWriter, r *http.Request) {
       } else if m := regexp.MustCompile(`^/user/(` + rUser + `)/namespaces/([\w:-]+)$`).FindStringSubmatch(r.URL.Path); m != nil { // Remove User from Namespace
         u := strings.ToLower(m[1])
         ns := strings.ToLower(m[2])
-  
+
         if slices.Contains(vault.Users[ruser].Roles, "admin") {
           if u != "root" {
             if _, ok := vault.Users[u]; ok {
               if _, ok := vault.Namespaces[ns]; ok {
                 delete(vault.Users[u].Namespaces, ns)
-  
+
                 vault.Audit[time.Now().UTC()] = &audit {
                   User: ruser,
                   Address: w.(*httpWriter).remoteHost,
                   Message: fmt.Sprintf("Removed User '%s' from Namespace '%s'", u, ns),
                 }
-  
+
                 if err := writeVaultFile(false); err == nil {
                   w.WriteHeader(http.StatusNoContent)
-  
+
                 } else {
                   http.Error(w, err.Error(), http.StatusInternalServerError)
                 }
@@ -1396,14 +1396,14 @@ func apiDeleteHandler(w http.ResponseWriter, r *http.Request) {
       } else if m := regexp.MustCompile(`^/data/(` + rNamespace + `)/(` + rVariable + `)$`).FindStringSubmatch(r.URL.Path); m != nil { // Delete Namespace Variable
         ns := strings.ToLower(m[1])
         k := strings.ToLower(m[2])
-  
+
         if v, ok := vault.Users[ruser].Namespaces[ns]; ok && v == "rw" {
           if _, ok := vault.Namespaces[ns][k]; ok {
             delete(vault.Namespaces[ns], k)
-  
+
             if err := writeVaultFile(false); err == nil {
               w.WriteHeader(http.StatusNoContent)
-  
+
             } else {
               http.Error(w, err.Error(), http.StatusInternalServerError)
             }

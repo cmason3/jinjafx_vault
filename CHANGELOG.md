@@ -1,5 +1,8 @@
 ## CHANGELOG
 
+### [v0.3.1] - In Development
+- Fixed an issue where error messages were blank in web interface
+
 ### [v0.3.0] - September 16, 2026
 - Removed `expires` on login response as it was pointless being an idle timeout
 - Added initial support (read-only) for a web interface to manage JinjaFx Vault
@@ -32,6 +35,7 @@
 - Initial release
 
 
+[v0.3.1]: https://github.com/cmason3/jinjafx_vault/compare/v0.3.0...v0.3.1
 [v0.3.0]: https://github.com/cmason3/jinjafx_vault/compare/v0.2.3...v0.3.0
 [v0.2.3]: https://github.com/cmason3/jinjafx_vault/compare/v0.2.2...v0.2.3
 [v0.2.2]: https://github.com/cmason3/jinjafx_vault/compare/v0.2.1...v0.2.2
