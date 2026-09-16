@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en" data-bs-theme="dark">
+  <head>
+    <meta charset="utf-8">
+    <title>JinjaFx Vault</title>
+    <link rel="icon" type="image/png" href="{{.Version}}/img/favicon.png" />
+    <link rel="stylesheet" href="{{.Version}}/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="{{.Version}}/css/vault.css" />
+  </head>
+  <body>
+    <nav class="navbar navbar-expand-lg p-0 bg-body-tertiary">
+      <div class="container-fluid p-2">
+        <img src="{{.Version}}/img/favicon.png" width="32" height="32">
+        <h5 class="m-0">&nbsp;JinjaFx Vault</h5>
+
+        <div class="collapse navbar-collapse justify-content-end">
+          <ul class="navbar-nav nav-pills">
+            <li class="nav-item">
+              <button id="admin" class="nav-link">Admin</button>
+            </li>
+            <li class="nav-item">
+              <button id="user" class="nav-link">User</button>
+            </li>
+            <li class="nav-item">
+              <button id="logout" class="nav-link">Logout</button>
+            </li>
+          </ul>
+        </div>
+      </div>
+    </nav>
+    <div id="content" class="container-fluid p-2">
+    </div>
+    <div id="data" class="modal modal-lg fade" tabindex="-1">
+      <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 id="data-var" class="modal-title"></h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+          </div>
+          <div class="modal-body">
+            <pre id="data-value"></pre>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div id="error" class="modal modal-lg fade" tabindex="-1">
+      <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+          <div class="modal-header">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-danger">
+              <circle cx="12" cy="12" r="10"></circle>
+              <line x1="12" y1="8" x2="12" y2="12"></line>
+              <line x1="12" y1="16" x2="12.01" y2="16"></line>
+            </svg>
+            <h5 class="modal-title text-danger">&nbsp;Error</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+          </div>
+          <div class="modal-body">
+            <span id="status" class="text-danger"></span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <script src="{{.Version}}/js/bootstrap.bundle.min.js"></script>
+    <script src="{{.Version}}/js/vault.js"></script>
+  </body>
+</html>

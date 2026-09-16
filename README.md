@@ -164,6 +164,39 @@ There is also a JinjaFx Vault Ansible role that provides a similar `jinjafx_vaul
 </details>
 
 <details>
+ <summary><b>Who Am I?</b><br />&nbsp;&nbsp;&nbsp;&nbsp;<code>GET</code> <code><b>/v1/whoami</b></code></summary>
+
+ #### Required Roles
+ - admin
+ - user
+
+ #### Required Headers
+ - X-Vault-Token
+
+ #### Response Codes
+ | Code | Response |
+ | :-: | :-- |
+ | 200 | OK |
+ | 401 | Not Logged In |
+ | 418 | User Password Expired |
+
+ #### Example Request
+ ```
+ curl -sS -X GET -H "X-Vault-Token: $TOKEN" https://localhost:8443/v1/whoami
+ ```
+
+ #### Example Response
+ ```json
+ {
+   "user": "root",
+   "roles": ["admin"]
+ }
+ ```
+ <hr>
+
+</details>
+
+<details>
  <summary><b>Get Users</b><br />&nbsp;&nbsp;&nbsp;&nbsp;<code>GET</code> <code><b>/v1/users</b></code></summary>
 
  #### Required Roles
@@ -331,8 +364,7 @@ There is also a JinjaFx Vault Ansible role that provides a similar `jinjafx_vaul
  #### Example Response
  ```json
  {
-   "token": "6b5ee43f-8b0f-4189-9d65-d7e9bf4534da",
-   "expires": "2026-08-25T15:05:37.664964191Z"
+   "token": "6b5ee43f-8b0f-4189-9d65-d7e9bf4534da"
  }
  ```
  <hr>
@@ -816,6 +848,7 @@ There is also a JinjaFx Vault Ansible role that provides a similar `jinjafx_vaul
  | Code | Response |
  | :-: | :-- |
  | 204 | Role Removed |
+ | 400 | Not Enough Roles Left |
  | 401 | Not Logged In |
  | 403 | Insufficient Privileges / Permission Denied |
  | 404 | User Not Found / Role Not Found |
