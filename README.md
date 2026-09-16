@@ -22,6 +22,7 @@ Options:
   -tls                          Enable Transport Layer Security
    -tls.crt <vault.crt>         TLS Certificate Chain
    -tls.key <vault.crt>         TLS Private Key
+  -webui                        Enable Web Interface
   -xff                          Use X-Forwarded-For in Logs
   -k                            Allow Insecure LDAPS
 
