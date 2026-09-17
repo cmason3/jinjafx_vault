@@ -66,7 +66,7 @@
     });
 
     document.getElementById('loginPassword').addEventListener('keyup', (e) => {
-      if (e.key === 'Enter') {
+      if ((e.key === 'Enter') && (document.getElementById('loginPassword').value.trim().length !== 0)) {
         document.getElementById('submit').click();
       }
     });

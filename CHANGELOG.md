@@ -1,8 +1,9 @@
 ## CHANGELOG
 
-### [v0.3.1] - In Development
-- Fixed an issue where error messages were blank in web interface
+### [v0.3.1] - September 17, 2026
+- Fixed an issue where error messages were blank in the web interface
 - Differentiated between Authentication Failed and Verification Failed
+- Improvements to the web interface to make it usable.
 
 ### [v0.3.0] - September 16, 2026
 - Removed `expires` on login response as it was pointless being an idle timeout

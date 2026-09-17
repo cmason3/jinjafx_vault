@@ -1,5 +1,4 @@
 (() => {
-  let active = null;
   let timeout = 5000;
 
   function setStatus(message) {
@@ -27,7 +26,7 @@
       fetch('v1/namespaces', { signal: AbortSignal.timeout(timeout) }).then((r) => {
         if (r.status === 200) {
           r.json().then(async(namespaces) => {
-            if (active === 'admin') {
+            if (localStorage.getItem('active') === 'admin') {
               fetch('v1/users', { signal: AbortSignal.timeout(timeout) }).then((r) => {
                 if (r.status === 200) {
                   r.json().then((users) => {
@@ -38,13 +37,13 @@
                       return a[1] - b[1];
                     }).reduce((a, c) => (a['<span class=key>' + c + '</span>'] = users[c], a), {});
 
-                    innerHTML += '<div style="display: flex; gap: 30px;">';
-                    innerHTML += '<div style="width: 100%;">';
+                    innerHTML += '<div class="flex">';
+                    innerHTML += '<div class="w-100">';
                     innerHTML += '<h5 class="pt-2 pb-3">Vault Users</h5>';
-                    innerHTML += '<pre class="ps-3">' + JSON.stringify(u, null, 2) + '</pre></div>';
-                    innerHTML += '<div style="width: 100%;">';
+                    innerHTML += '<pre class="ms-3 me-3 p-1 border rounded">' + JSON.stringify(u, null, 2) + '</pre></div>';
+                    innerHTML += '<div class="w-100">';
                     innerHTML += '<h5 class="pt-2 pb-3">Vault Namespaces</h5>';
-                    innerHTML += '<pre class="ps-3">' + JSON.stringify(Object.keys(namespaces).sort(), null, 2) + '</pre></div>';
+                    innerHTML += '<pre class="ms-3 me-3 p-1 border rounded">' + JSON.stringify(Object.keys(namespaces).sort(), null, 2) + '</pre></div>';
                     content.innerHTML = innerHTML + '</div>';
                   });
       
@@ -68,10 +67,10 @@
               }
 
               innerHTML += '<h5 class="pt-2 pb-3">Namespace Variables</h5>';
-              innerHTML += '<div class="ps-3 pe-3" style="display: flex; gap: 30px;">';
+              innerHTML += '<div class="ps-3 pe-3 flex">';
 
               for (let ns of Object.keys(data).sort()) {
-                innerHTML += '<div style="width: 100%;"><h5 class="pb-1 text-danger">' + ns + '</h5><ul class="list-group">';
+                innerHTML += '<div class="w-100"><h5 class="pb-1 text-danger">' + ns + '</h5><ul class="list-group">';
 
                 for (let key of Object.keys(data[ns]).sort()) {
                   innerHTML += '<li class="list-group-item"><span class=data data-ns=' + ns + ' data-var=' + key + '>' + key + '</span></li>'
@@ -95,31 +94,6 @@
         }
       });
 
-
-
-
-      /*
-      if (active == 'admin') {
-
-      } else {
-        fetch('v1/namespaces', { signal: AbortSignal.timeout(timeout) }).then((r) => {
-          if (r.status === 200) {
-            r.json().then(async(namespaces) => {
-
-
-
-
-
-
-            });
-
-          } else {
-            window.location.reload();
-          }
-        });
-      }
-      */
-
     } catch (error) {
       content.innerHTML = '';
       setStatus(error);
@@ -128,19 +102,19 @@
 
   window.addEventListener('load', (e) => {
     document.getElementById('admin').addEventListener('click', (e) => {
-      if (active != 'admin') {
+      if (localStorage.getItem('active') != 'admin') {
         document.getElementById('user').classList.remove('active');
         document.getElementById('admin').classList.add('active');
-        active = 'admin';
+        localStorage.setItem('active', 'admin');
         buildPage();
       }
     });
 
     document.getElementById('user').addEventListener('click', (e) => {
-      if (active != 'user') {
+      if (localStorage.getItem('active') != 'user') {
         document.getElementById('admin').classList.remove('active');
         document.getElementById('user').classList.add('active');
-        active = 'user';
+        localStorage.setItem('active', 'user');
         buildPage();
       }
     });
@@ -163,21 +137,106 @@
       }
     });
 
+    document.getElementById('api_request').addEventListener('shown.bs.modal', (e) => {
+      document.getElementById('url').focus();
+    });
+
+    document.getElementById('api_request').addEventListener('hidden.bs.modal', (e) => {
+      e.relatedTarget.blur();
+    });
+
+    document.getElementById('method').addEventListener('change', (e) => {
+      if (e.target.value === 'POST') {
+        document.getElementById('request').disabled = false;
+
+      } else {
+        document.getElementById('request').disabled = true;
+      }
+      document.getElementById('url').focus();
+    });
+
+    document.getElementById('url').addEventListener('keyup', (e) => {
+      if ((e.key === 'Enter') && (document.getElementById('url').value.trim().length !== 0)) {
+        if (!document.getElementById('request').disabled) {
+          document.getElementById('request').focus();
+
+        } else {
+          document.getElementById('api_submit').click();
+        }
+      }
+    });
+
+    document.getElementById('api_submit').addEventListener('click', (e) => {
+      if (document.getElementById('url').value.trim().length === 0) {
+        document.getElementById('url').focus();
+        return;
+      }
+
+      bootstrap.Modal.getInstance(document.getElementById('api_request')).hide();
+
+      try {
+        if (document.getElementById('method').value === 'POST') {
+          body = document.getElementById('request').value;
+
+          fetch('v1/' + document.getElementById('url').value, { method: 'POST', body: body, signal: AbortSignal.timeout(timeout) }).then((r) => {
+            if ((r.status === 401) || (r.status === 418)) {
+              window.location.reload();
+
+            } else if (r.status >= 300) {
+              r.text().then((msg) => {
+                setStatus('<b>HTTP ' + r.status + '</b> ' + msg);
+              });
+
+            } else {
+              buildPage();
+            }
+          });
+
+        } else {
+          fetch('v1/' + document.getElementById('url').value, { method: 'DELETE', signal: AbortSignal.timeout(timeout) }).then((r) => {
+            if ((r.status === 401) || (r.status === 418)) {
+              window.location.reload();
+
+            } else if (r.status >= 300) {
+              r.text().then((msg) => {
+                setStatus('<b>HTTP ' + r.status + '</b> ' + msg);
+              });
+
+            } else {
+              buildPage();
+            }
+          });
+        }
+      } catch (error) {
+        setStatus(error);
+      }
+    });
+
+    document.getElementById('api').addEventListener('click', (e) => {
+      new bootstrap.Modal(document.getElementById('api_request')).show();
+    });
+
     try {
       fetch('v1/whoami', { signal: AbortSignal.timeout(timeout) }).then((r) => {
         if (r.status === 200) {
           r.json().then((obj) => {
-            if (obj.roles.includes('admin')) {
-              document.getElementById('admin').classList.add('active');
-              active = 'admin';
+            let active = localStorage.getItem('active');
 
-              if (!obj.roles.includes('user')) {
-                document.getElementById('user').classList.add('disabled');
+            if ((active !== null) && !obj.roles.includes(active)) {
+              active = null;
+            }
+
+            if (active === null) {
+              localStorage.setItem('active', obj.roles.includes('admin') ? 'admin' : 'user');
+            }
+
+            for (let role of ['admin', 'user']) {
+              if (obj.roles.includes(role)) {
+                document.getElementById(role).classList.remove('disabled');
+                if (localStorage.getItem('active') === role) {
+                  document.getElementById(role).classList.add('active');
+                }
               }
-            } else {
-              document.getElementById('admin').classList.add('disabled');
-              document.getElementById('user').classList.add('active');
-              active = 'user';
             }
             buildPage();
           });

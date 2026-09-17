@@ -12,6 +12,10 @@ span.data {
   cursor: pointer;
   color: #0d6efd;
 }
+div.flex {
+  display: flex;
+  gap: 25px;
+}
 pre {
   white-space: pre-wrap;
   word-wrap: break-word;
