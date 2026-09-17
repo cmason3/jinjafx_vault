@@ -45,7 +45,7 @@ Description=JinjaFx Vault
 
 [Service]
 Environment="JFX_VAULT_KEY=<KEY>"
-ExecStart=/usr/local/bin/jinjafx_vault -serve <jinjafx.vault> -tls -tls.crt <vault.crt> -tls.key <vault.key>
+ExecStart=/usr/local/bin/jinjafx_vault -serve <jinjafx.vault> -tls -tls.crt <vault.crt> -tls.key <vault.key> -webui
 Restart=on-success
 
 [Install]
