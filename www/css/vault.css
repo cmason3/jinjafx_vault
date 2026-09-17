@@ -1,10 +1,18 @@
+div#content {
+  height: calc(100vh - 60px);
+}
 nav.navbar {
   height: 60px;
 }
-div#content {
-  height: calc(100vh - 60px);
+span.key {
+  color: #dc3545;
+  font-weight: bold;
 }
 span.data {
   cursor: pointer;
   color: #0d6efd;
+}
+pre {
+  white-space: pre-wrap;
+  word-wrap: break-word;
 }

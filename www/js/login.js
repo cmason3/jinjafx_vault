@@ -49,6 +49,7 @@
           } else {
             r.text().then((msg) => {
               setStatus('<b>HTTP ' + r.status + '</b> ' + msg);
+              document.getElementById('loginUser').focus();
             });
           }
         });

@@ -533,7 +533,7 @@ func apiLoginHandler(w http.ResponseWriter, r *http.Request) {
             if len(vault.Users[u].Password) > 0 {
               if !verifyPassword(request.Password, v.Password) {
                 userRateLimits[key] = append(userRateLimits[key], now)
-                http.Error(w, "Password Verification Failed", http.StatusUnauthorized)
+                http.Error(w, "User Authentication Failed", http.StatusUnauthorized)
                 return
               }
             } else if len(vault.Users[u].LdapServer) > 0 {
@@ -596,7 +596,7 @@ func apiLoginHandler(w http.ResponseWriter, r *http.Request) {
           }
         } else {
           userRateLimits[key] = append(userRateLimits[key], now)
-          http.Error(w, "Password Verification Failed", http.StatusUnauthorized)
+          http.Error(w, "User Authentication Failed", http.StatusUnauthorized)
         }
       } else {
         userRateLimits[key] = append(userRateLimits[key][1:], now)
@@ -781,7 +781,7 @@ func apiPostHandler(w http.ResponseWriter, r *http.Request) {
               http.Error(w, err.Error(), http.StatusBadRequest)
             }
           } else {
-            http.Error(w, "Password Verification Failed", http.StatusUnauthorized)
+            http.Error(w, "Password Verification Failed", http.StatusBadRequest)
           }
         } else {
           http.Error(w, err.Error(), http.StatusBadRequest)

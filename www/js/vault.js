@@ -1,7 +1,6 @@
 (() => {
   let active = null;
   let timeout = 5000;
-  let sdata = null;
 
   function setStatus(message) {
     s = document.getElementById('status');
@@ -23,60 +22,95 @@
     content.innerHTML = '';
 
     try {
-      if (active == 'admin') {
-        fetch('v1/users', { signal: AbortSignal.timeout(timeout) }).then((r) => {
-          if (r.status === 200) {
-            r.json().then((users) => {
-              let u = Object.keys(users).sort((a, b) => {
-                if (a === 'root') {
-                  return -1;
+      let innerHTML = '';
+
+      fetch('v1/namespaces', { signal: AbortSignal.timeout(timeout) }).then((r) => {
+        if (r.status === 200) {
+          r.json().then(async(namespaces) => {
+            if (active === 'admin') {
+              fetch('v1/users', { signal: AbortSignal.timeout(timeout) }).then((r) => {
+                if (r.status === 200) {
+                  r.json().then((users) => {
+                    let u = Object.keys(users).sort((a, b) => {
+                      if (a === 'root') {
+                        return -1;
+                      }
+                      return a[1] - b[1];
+                    }).reduce((a, c) => (a['<span class=key>' + c + '</span>'] = users[c], a), {});
+
+                    innerHTML += '<div style="display: flex; gap: 30px;">';
+                    innerHTML += '<div style="width: 100%;">';
+                    innerHTML += '<h5 class="pt-2 pb-3">Vault Users</h5>';
+                    innerHTML += '<pre class="ps-3">' + JSON.stringify(u, null, 2) + '</pre></div>';
+                    innerHTML += '<div style="width: 100%;">';
+                    innerHTML += '<h5 class="pt-2 pb-3">Vault Namespaces</h5>';
+                    innerHTML += '<pre class="ps-3">' + JSON.stringify(Object.keys(namespaces).sort(), null, 2) + '</pre></div>';
+                    content.innerHTML = innerHTML + '</div>';
+                  });
+      
+                } else {
+                  window.location.reload();
                 }
-                return a[1] - b[1];
-              }).reduce((a, c) => (a[c] = users[c], a), {});
+              });
 
-              content.innerHTML = '<pre><h6 class="fw-bold">Vault Users</h6>' + quote(JSON.stringify(u, null, 2)) + '</pre>';
-            });
-
-          } else {
-            window.location.reload();
-          }
-        });
-
-      } else {
-        fetch('v1/namespaces', { signal: AbortSignal.timeout(timeout) }).then((r) => {
-          if (r.status === 200) {
-            r.json().then(async(namespaces) => {
+            } else {
               let data = {};
-              sdata = {};
 
               for (let ns in namespaces) {
                 let r = await fetch('v1/data/' + ns, { signal: AbortSignal.timeout(timeout) });
                 if (r.status === 200) {
                   let namespace = await r.json();
-
-                  data[ns] = {};
-                  sdata[ns] = namespace;
-
-                  for (let key in namespace) {
-                    data[ns][key] = {
-                      'data': '<span class=data data-ns=' + ns + ' data-var=' + key + '>*****</span>'
-                    };
-                  }
+                  data[ns] = namespace
 
                 } else {
                   window.location.reload();
                 }
               }
-              content.innerHTML = '<pre><h6 class="fw-bold">Namespace Variables</h6>' + JSON.stringify(data, null, 2) + '</pre>';
+
+              innerHTML += '<h5 class="pt-2 pb-3">Namespace Variables</h5>';
+              innerHTML += '<div class="ps-3 pe-3" style="display: flex; gap: 30px;">';
+
+              for (let ns of Object.keys(data).sort()) {
+                innerHTML += '<div style="width: 100%;"><h5 class="pb-1 text-danger">' + ns + '</h5><ul class="list-group">';
+
+                for (let key of Object.keys(data[ns]).sort()) {
+                  innerHTML += '<li class="list-group-item"><span class=data data-ns=' + ns + ' data-var=' + key + '>' + key + '</span></li>'
+                }
+                innerHTML += '</ul></div>'
+              }
+              content.innerHTML = innerHTML + '</div>';
 
               document.querySelectorAll('span[data-var]:not([data-var=""])').forEach((el) => {
                 el.addEventListener('click', (e) => {
                   e.preventDefault();
                   document.getElementById('data-var').innerHTML = e.target.getAttribute('data-ns') + ' / ' + e.target.getAttribute('data-var');
-                  document.getElementById('data-value').innerHTML = quote(JSON.stringify(sdata[e.target.getAttribute('data-ns')][e.target.getAttribute('data-var')], null, 2));
+                  document.getElementById('data-value').innerHTML = quote(JSON.stringify(data[e.target.getAttribute('data-ns')][e.target.getAttribute('data-var')], null, 2));
                   new bootstrap.Modal(document.getElementById('data')).show();
                 });
               });
+            }
+          });
+        } else {
+          window.location.reload();
+        }
+      });
+
+
+
+
+      /*
+      if (active == 'admin') {
+
+      } else {
+        fetch('v1/namespaces', { signal: AbortSignal.timeout(timeout) }).then((r) => {
+          if (r.status === 200) {
+            r.json().then(async(namespaces) => {
+
+
+
+
+
+
             });
 
           } else {
@@ -84,6 +118,8 @@
           }
         });
       }
+      */
+
     } catch (error) {
       content.innerHTML = '';
       setStatus(error);
