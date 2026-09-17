@@ -56,26 +56,38 @@
               let data = {};
 
               for (let ns in namespaces) {
-                let r = await fetch('v1/data/' + ns, { signal: AbortSignal.timeout(timeout) });
-                if (r.status === 200) {
-                  let namespace = await r.json();
-                  data[ns] = namespace
+                if (namespaces[ns] !== 'na') {
+                  let r = await fetch('v1/data/' + ns, { signal: AbortSignal.timeout(timeout) });
+                  if (r.status === 200) {
+                    let namespace = await r.json();
+                    data[ns] = namespace
 
-                } else {
-                  window.location.reload();
+                  } else {
+                    window.location.reload();
+                  }
                 }
               }
 
               innerHTML += '<h5 class="pt-2 pb-3">Namespace Variables</h5>';
               innerHTML += '<div class="ps-3 pe-3 flex">';
 
-              for (let ns of Object.keys(data).sort()) {
-                innerHTML += '<div class="w-100"><h5 class="pb-1 text-danger">' + ns + '</h5><ul class="list-group">';
+              if (Object.keys(data).length) {
+                for (let ns of Object.keys(data).sort()) {
+                  let p = namespaces[ns].replace('ro', 'read-only').replace('rw', 'read/write');
+                  innerHTML += '<div class="w-100"><h5 class="pb-1 text-danger">' + ns + '<span class="text-secondary"> ' + p + '</span></h5><ul class="list-group">';
 
-                for (let key of Object.keys(data[ns]).sort()) {
-                  innerHTML += '<li class="list-group-item"><span class=data data-ns=' + ns + ' data-var=' + key + '>' + key + '</span></li>'
+                  if (Object.keys(data[ns]).length) {
+                    for (let key of Object.keys(data[ns]).sort()) {
+                      innerHTML += '<li class="list-group-item"><span class=data data-ns=' + ns + ' data-var=' + key + '>' + key + '</span></li>'
+                    }
+                  } else {
+                    innerHTML += '<li class="list-group-item">No Variables</span></li>'
+                  }
+
+                  innerHTML += '</ul></div>'
                 }
-                innerHTML += '</ul></div>'
+              } else {
+                innerHTML += '<div class="w-100"><h5 class="pb-1 text-danger">No Namespaces</h5>';
               }
               content.innerHTML = innerHTML + '</div>';
 
