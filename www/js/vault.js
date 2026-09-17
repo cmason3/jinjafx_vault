@@ -250,6 +250,8 @@
                 }
               }
             }
+
+            document.getElementById('userid').innerHTML = obj.user;
             buildPage();
           });
 
