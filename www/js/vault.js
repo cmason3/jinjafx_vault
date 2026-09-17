@@ -94,7 +94,7 @@
               document.querySelectorAll('span[data-var]:not([data-var=""])').forEach((el) => {
                 el.addEventListener('click', (e) => {
                   e.preventDefault();
-                  document.getElementById('data-var').innerHTML = e.target.getAttribute('data-ns') + ' / ' + e.target.getAttribute('data-var');
+                  document.getElementById('data-var').innerHTML = '<span class="text-danger">' + e.target.getAttribute('data-ns') + '</span><span class="text-secondary"> ' + e.target.getAttribute('data-var') + '</span>';
                   document.getElementById('data-value').innerHTML = quote(JSON.stringify(data[e.target.getAttribute('data-ns')][e.target.getAttribute('data-var')], null, 2));
                   new bootstrap.Modal(document.getElementById('data')).show();
                 });
