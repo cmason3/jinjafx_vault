@@ -354,7 +354,7 @@ There is also a JinjaFx Vault Ansible role that provides a similar `jinjafx_vaul
  | :-: | :-- |
  | 200 | Logged In |
  | 400 | Bad Request |
- | 401 | Password Verification Failed / User Disabled |
+ | 401 | User Authentication Failed / User Disabled |
  | 429 | Too Many Failed Attempts (3 in 15m) |
 
  #### Example Request
@@ -418,8 +418,8 @@ There is also a JinjaFx Vault Ansible role that provides a similar `jinjafx_vaul
  | Code | Response |
  | :-: | :-- |
  | 204 | Password Updated |
- | 400 | Bad Request |
- | 401 | Not Logged In / Password Verification Failed |
+ | 400 | Bad Request / Password Verification Failed |
+ | 401 | Not Logged In / User Authentication Failed |
 
  #### Example Request
  ```

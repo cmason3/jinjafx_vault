@@ -47,7 +47,10 @@
             });
 
           } else {
-            setStatus(r.statusText);
+            r.text().then((msg) => {
+              setStatus('<b>HTTP ' + r.status + '</b> ' + msg);
+              document.getElementById('loginUser').focus();
+            });
           }
         });
 
@@ -63,7 +66,7 @@
     });
 
     document.getElementById('loginPassword').addEventListener('keyup', (e) => {
-      if (e.key === 'Enter') {
+      if ((e.key === 'Enter') && (document.getElementById('loginPassword').value.trim().length !== 0)) {
         document.getElementById('submit').click();
       }
     });

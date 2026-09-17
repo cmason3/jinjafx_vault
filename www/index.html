@@ -16,15 +16,17 @@
         <div class="collapse navbar-collapse justify-content-end">
           <ul class="navbar-nav nav-pills">
             <li class="nav-item">
-              <button id="admin" class="nav-link">Admin</button>
+              <button id="admin" class="nav-link disabled">Admin</button>
             </li>
             <li class="nav-item">
-              <button id="user" class="nav-link">User</button>
+              <button id="user" class="nav-link disabled">User</button>
             </li>
             <li class="nav-item">
               <button id="logout" class="nav-link">Logout</button>
             </li>
           </ul>
+          <hr />
+          <button id="api" class="btn btn-outline-warning ms-5">API</button>
         </div>
       </div>
     </nav>
@@ -45,6 +47,44 @@
         </div>
       </div>
     </div>
+
+    <div id="api_request" class="modal modal-lg fade" tabindex="-1">
+      <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title">API Request</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+          </div>
+          <div class="modal-body">
+            <div class="row">
+              <div class="col-3">
+                <select id="method" class="form-select">
+                  <option selected value="POST">POST</option>
+                  <option value="DELETE">DELETE</option>
+                </select>
+              </div>
+              <div class="col-9">
+                <div class="input-group">
+                  <span class="input-group-text">/v1/</span>
+                  <input id="url" class="form-control" placeholder="data/&lt;namespace&gt;[/&lt;variable&gt;]">
+                </div>
+              </div>
+            </div><br />
+            <div class="row">
+              <div class="col-12">
+                <textarea id="request" class="form-control" rows=8 placeholder='{
+  "data": "<value>"
+}'></textarea>
+              </div>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button id="api_submit" class="btn btn-primary" type="button">Submit</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <div id="error" class="modal modal-lg fade" tabindex="-1">
       <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">

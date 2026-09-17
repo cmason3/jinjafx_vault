@@ -38,7 +38,8 @@
         return;
 
       } else if (document.getElementById('loginNewPassword').value != document.getElementById('loginVerifyPassword').value) {
-        setStatus('Password Verification Failed');
+        setStatus('<b>HTTP 400</b> Password Verification Failed');
+        document.getElementById('loginVerifyPassword').focus();
         return;
       }
 
@@ -54,7 +55,8 @@
 
           } else {
             r.text().then((msg) => {
-              setStatus(msg);
+              setStatus('<b>HTTP ' + r.status + '</b> ' + msg);
+              document.getElementById('loginPassword').focus();
             });
           }
         });

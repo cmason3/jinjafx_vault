@@ -1,7 +1,5 @@
 (() => {
-  let active = null;
   let timeout = 5000;
-  let sdata = null;
 
   function setStatus(message) {
     s = document.getElementById('status');
@@ -23,67 +21,79 @@
     content.innerHTML = '';
 
     try {
-      if (active == 'admin') {
-        fetch('v1/users', { signal: AbortSignal.timeout(timeout) }).then((r) => {
-          if (r.status === 200) {
-            r.json().then((users) => {
-              let u = Object.keys(users).sort((a, b) => {
-                if (a === 'root') {
-                  return -1;
+      let innerHTML = '';
+
+      fetch('v1/namespaces', { signal: AbortSignal.timeout(timeout) }).then((r) => {
+        if (r.status === 200) {
+          r.json().then(async(namespaces) => {
+            if (localStorage.getItem('active') === 'admin') {
+              fetch('v1/users', { signal: AbortSignal.timeout(timeout) }).then((r) => {
+                if (r.status === 200) {
+                  r.json().then((users) => {
+                    let u = Object.keys(users).sort((a, b) => {
+                      if (a === 'root') {
+                        return -1;
+                      }
+                      return a[1] - b[1];
+                    }).reduce((a, c) => (a['<span class=key>' + c + '</span>'] = users[c], a), {});
+
+                    innerHTML += '<div class="flex">';
+                    innerHTML += '<div class="w-100">';
+                    innerHTML += '<h5 class="pt-2 pb-3">Vault Users</h5>';
+                    innerHTML += '<pre class="ms-3 me-3 p-1 border rounded">' + JSON.stringify(u, null, 2) + '</pre></div>';
+                    innerHTML += '<div class="w-100">';
+                    innerHTML += '<h5 class="pt-2 pb-3">Vault Namespaces</h5>';
+                    innerHTML += '<pre class="ms-3 me-3 p-1 border rounded">' + JSON.stringify(Object.keys(namespaces).sort(), null, 2) + '</pre></div>';
+                    content.innerHTML = innerHTML + '</div>';
+                  });
+      
+                } else {
+                  window.location.reload();
                 }
-                return a[1] - b[1];
-              }).reduce((a, c) => (a[c] = users[c], a), {});
+              });
 
-              content.innerHTML = '<pre><h6 class="fw-bold">Vault Users</h6>' + quote(JSON.stringify(u, null, 2)) + '</pre>';
-            });
-
-          } else {
-            window.location.reload();
-          }
-        });
-
-      } else {
-        fetch('v1/namespaces', { signal: AbortSignal.timeout(timeout) }).then((r) => {
-          if (r.status === 200) {
-            r.json().then(async(namespaces) => {
+            } else {
               let data = {};
-              sdata = {};
 
               for (let ns in namespaces) {
                 let r = await fetch('v1/data/' + ns, { signal: AbortSignal.timeout(timeout) });
                 if (r.status === 200) {
                   let namespace = await r.json();
-
-                  data[ns] = {};
-                  sdata[ns] = namespace;
-
-                  for (let key in namespace) {
-                    data[ns][key] = {
-                      'data': '<span class=data data-ns=' + ns + ' data-var=' + key + '>*****</span>'
-                    };
-                  }
+                  data[ns] = namespace
 
                 } else {
                   window.location.reload();
                 }
               }
-              content.innerHTML = '<pre><h6 class="fw-bold">Namespace Variables</h6>' + JSON.stringify(data, null, 2) + '</pre>';
+
+              innerHTML += '<h5 class="pt-2 pb-3">Namespace Variables</h5>';
+              innerHTML += '<div class="ps-3 pe-3 flex">';
+
+              for (let ns of Object.keys(data).sort()) {
+                innerHTML += '<div class="w-100"><h5 class="pb-1 text-danger">' + ns + '</h5><ul class="list-group">';
+
+                for (let key of Object.keys(data[ns]).sort()) {
+                  innerHTML += '<li class="list-group-item"><span class=data data-ns=' + ns + ' data-var=' + key + '>' + key + '</span></li>'
+                }
+                innerHTML += '</ul></div>'
+              }
+              content.innerHTML = innerHTML + '</div>';
 
               document.querySelectorAll('span[data-var]:not([data-var=""])').forEach((el) => {
                 el.addEventListener('click', (e) => {
                   e.preventDefault();
                   document.getElementById('data-var').innerHTML = e.target.getAttribute('data-ns') + ' / ' + e.target.getAttribute('data-var');
-                  document.getElementById('data-value').innerHTML = quote(JSON.stringify(sdata[e.target.getAttribute('data-ns')][e.target.getAttribute('data-var')], null, 2));
+                  document.getElementById('data-value').innerHTML = quote(JSON.stringify(data[e.target.getAttribute('data-ns')][e.target.getAttribute('data-var')], null, 2));
                   new bootstrap.Modal(document.getElementById('data')).show();
                 });
               });
-            });
+            }
+          });
+        } else {
+          window.location.reload();
+        }
+      });
 
-          } else {
-            window.location.reload();
-          }
-        });
-      }
     } catch (error) {
       content.innerHTML = '';
       setStatus(error);
@@ -92,19 +102,19 @@
 
   window.addEventListener('load', (e) => {
     document.getElementById('admin').addEventListener('click', (e) => {
-      if (active != 'admin') {
+      if (localStorage.getItem('active') != 'admin') {
         document.getElementById('user').classList.remove('active');
         document.getElementById('admin').classList.add('active');
-        active = 'admin';
+        localStorage.setItem('active', 'admin');
         buildPage();
       }
     });
 
     document.getElementById('user').addEventListener('click', (e) => {
-      if (active != 'user') {
+      if (localStorage.getItem('active') != 'user') {
         document.getElementById('admin').classList.remove('active');
         document.getElementById('user').classList.add('active');
-        active = 'user';
+        localStorage.setItem('active', 'user');
         buildPage();
       }
     });
@@ -116,7 +126,9 @@
             window.location.href = 'login.html';
 
           } else {
-            setStatus(r.statusText);
+            r.text().then((msg) => {
+              setStatus('<b>HTTP ' + r.status + '</b> ' + msg);
+            });
           }
         });
 
@@ -125,28 +137,114 @@
       }
     });
 
+    document.getElementById('api_request').addEventListener('shown.bs.modal', (e) => {
+      document.getElementById('url').focus();
+    });
+
+    document.getElementById('api_request').addEventListener('hidden.bs.modal', (e) => {
+      e.relatedTarget.blur();
+    });
+
+    document.getElementById('method').addEventListener('change', (e) => {
+      if (e.target.value === 'POST') {
+        document.getElementById('request').disabled = false;
+
+      } else {
+        document.getElementById('request').disabled = true;
+      }
+      document.getElementById('url').focus();
+    });
+
+    document.getElementById('url').addEventListener('keyup', (e) => {
+      if ((e.key === 'Enter') && (document.getElementById('url').value.trim().length !== 0)) {
+        if (!document.getElementById('request').disabled) {
+          document.getElementById('request').focus();
+
+        } else {
+          document.getElementById('api_submit').click();
+        }
+      }
+    });
+
+    document.getElementById('api_submit').addEventListener('click', (e) => {
+      if (document.getElementById('url').value.trim().length === 0) {
+        document.getElementById('url').focus();
+        return;
+      }
+
+      bootstrap.Modal.getInstance(document.getElementById('api_request')).hide();
+
+      try {
+        if (document.getElementById('method').value === 'POST') {
+          body = document.getElementById('request').value;
+
+          fetch('v1/' + document.getElementById('url').value, { method: 'POST', body: body, signal: AbortSignal.timeout(timeout) }).then((r) => {
+            if ((r.status === 401) || (r.status === 418)) {
+              window.location.reload();
+
+            } else if (r.status >= 300) {
+              r.text().then((msg) => {
+                setStatus('<b>HTTP ' + r.status + '</b> ' + msg);
+              });
+
+            } else {
+              buildPage();
+            }
+          });
+
+        } else {
+          fetch('v1/' + document.getElementById('url').value, { method: 'DELETE', signal: AbortSignal.timeout(timeout) }).then((r) => {
+            if ((r.status === 401) || (r.status === 418)) {
+              window.location.reload();
+
+            } else if (r.status >= 300) {
+              r.text().then((msg) => {
+                setStatus('<b>HTTP ' + r.status + '</b> ' + msg);
+              });
+
+            } else {
+              buildPage();
+            }
+          });
+        }
+      } catch (error) {
+        setStatus(error);
+      }
+    });
+
+    document.getElementById('api').addEventListener('click', (e) => {
+      new bootstrap.Modal(document.getElementById('api_request')).show();
+    });
+
     try {
       fetch('v1/whoami', { signal: AbortSignal.timeout(timeout) }).then((r) => {
         if (r.status === 200) {
           r.json().then((obj) => {
+            let active = localStorage.getItem('active');
 
-            if (obj.roles.includes('admin')) {
-              document.getElementById('admin').classList.add('active');
-              active = 'admin';
+            if ((active !== null) && !obj.roles.includes(active)) {
+              active = null;
+            }
 
-              if (!obj.roles.includes('user')) {
-                document.getElementById('user').classList.add('disabled');
+            if (active === null) {
+              localStorage.setItem('active', obj.roles.includes('admin') ? 'admin' : 'user');
+            }
+
+            for (let role of ['admin', 'user']) {
+              if (obj.roles.includes(role)) {
+                document.getElementById(role).classList.remove('disabled');
+                if (localStorage.getItem('active') === role) {
+                  document.getElementById(role).classList.add('active');
+                }
               }
-            } else {
-              document.getElementById('admin').classList.add('disabled');
-              document.getElementById('user').classList.add('active');
-              active = 'user';
             }
             buildPage();
           });
 
         } else {
-          setStatus(r.statusText);
+          r.text().then((msg) => {
+            setStatus('<b>HTTP ' + r.status + '</b> ' + msg);
+          });
         }
       });
 
