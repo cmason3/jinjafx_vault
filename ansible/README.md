@@ -36,5 +36,5 @@ The purpose of this role is to import the variables from a JinjaFx Vault namespa
 #### template.j2
 
 ```jinja2
-{{ jinjafx_vault.<variable> }}
+{{ jinjafx_vault["<variable>"] }}
 ```
