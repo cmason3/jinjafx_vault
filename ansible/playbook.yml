@@ -1,7 +1,6 @@
 ---
 - hosts: all
   gather_facts: no
-  force_handlers: true # to Force JinjaFx Vault Logout
   connection: local
 
   vars_prompt:
@@ -12,14 +11,16 @@
       prompt: "Password"
       private: "yes"
 
-  vars:
-    jinjafx_vault_url: "https://jinjafx.vault.url:8443"
-    jinjafx_vault_timeout: 5 # default
-    jinjafx_vault_verify: true # default
-
   tasks:
     - ansible.builtin.import_role:
         name: jinjafx_vault
+      vars:
+        vault_url: "https://jinjafx.vault.url:8443"
+        vault_timeout: 5 # default
+        vault_verify: true # default        
+        vault_user: "{{ jinjafx_vault_user }}"
+        vault_password: "{{ jinjafx_vault_password }}"
+        vault_namespace: "<namespace>"
 
     - ansible.builtin.template:
         src: "template.j2"
