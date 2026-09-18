@@ -1,13 +1,40 @@
-- name: "Login to JinjaFx Vault"
-  ansible.builtin.uri:
-    url: "{{ jinjafx_vault_url }}/v1/login"
-    validate_certs: "{{ jinjafx_vault_verify|default(True) }}"
-    timeout: "{{ jinjafx_vault_timeout|default(5) }}"
-    body: '{ "user": "{{ jinjafx_vault_user }}", "password": "{{ jinjafx_vault_password }}" }'
-    body_format: json
-    return_content: true
-    method: POST
-  register: jinjafx_vault_login
-  changed_when: true
+- block:
+    - name: "Login to JinjaFx Vault"
+      ansible.builtin.uri:
+        url: "{{ vault_url }}/v1/login"
+        validate_certs: "{{ vault_verify|default(True) }}"
+        timeout: "{{ vault_timeout|default(5) }}"
+        body: '{ "user": "{{ vault_user }}", "password": "{{ vault_password }}" }'
+        body_format: json
+        return_content: true
+        method: POST
+      register: jinjafx_vault_login
+
+    - name: "Fetch Vault Namespace '{{ vault_namespace }}'"
+      ansible.builtin.uri:
+        url: "{{ vault_url }}/v1/data/{{ vault_namespace }}"
+        validate_certs: "{{ vault_verify|default(True) }}"
+        timeout: "{{ vault_timeout|default(5) }}"
+        method: GET
+        headers:
+          "X-Vault-Token": "{{ jinjafx_vault_login.json.token }}"
+      register: result
+
+    - name: "Import Vault Namespace into 'jinjafx_vault'"
+      set_fact:
+        jinjafx_vault: "{{ jinjafx_vault|default({})|combine({ item.key: item.value['data'] }) }}"
+      loop: "{{ result.json|dict2items }}"
+      loop_control:
+        label: "jinjafx_vault.{{ item.key }}"
+
+    - name: "Logout from JinjaFx Vault"
+      ansible.builtin.uri:
+        url: "{{ vault_url }}/v1/logout"
+        validate_certs: "{{ vault_verify|default(True) }}"
+        timeout: "{{ vault_timeout|default(5) }}"
+        method: POST
+        status_code: 204
+        headers:
+          "X-Vault-Token": "{{ jinjafx_vault_login.json.token }}"
+
   run_once: true
-  notify: "Logout from JinjaFx Vault"
