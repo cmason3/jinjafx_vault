@@ -6,9 +6,16 @@ The purpose of this role is to import the variables from a JinjaFx Vault namespa
 
 ```yaml
 - hosts: all
-  gather_facts: false
+  gather_facts: no
   connection: local
 
+  vars_prompt:
+    - name: jinjafx_vault_user
+      prompt: "Vault User"
+      private: "no"
+    - name: jinjafx_vault_password
+      prompt: "Password"
+      private: "yes"
 
   tasks:
     - ansible.builtin.import_role:
@@ -24,13 +31,10 @@ The purpose of this role is to import the variables from a JinjaFx Vault namespa
     - ansible.builtin.template:
         src: "template.j2"
         dest: "{{ inventory_hostname }}.txt"
-
 ```
-
 
 #### template.j2
 
 ```jinja2
-
-
+{{ jinjafx_vault.<variable> }}
 ```
