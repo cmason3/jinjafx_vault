@@ -1,7 +1,8 @@
 ## CHANGELOG
 
-### [v0.3.2] - In Development
+### [v0.3.2] - September 18, 2026
 - Various cosmetic enhancements to the web interface
+- Updated the Ansible Role with some improvements
 
 ### [v0.3.1] - September 17, 2026
 - Fixed an issue where error messages were blank in the web interface
