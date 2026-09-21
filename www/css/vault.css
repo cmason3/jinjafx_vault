@@ -5,12 +5,12 @@ nav.navbar {
   height: 60px;
 }
 span.key {
-  color: #dc3545;
+  color: var(--bs-danger);
   font-weight: bold;
 }
 span.data {
   cursor: pointer;
-  color: #0d6efd;
+  color: var(--bs-link-color);
 }
 div.flex {
   display: flex;
@@ -19,4 +19,29 @@ div.flex {
 pre {
   white-space: pre-wrap;
   word-wrap: break-word;
+}
+span.inline {
+  background: none;
+}
+a.header {
+  display: flex;
+  align-items: center;
+  text-decoration: none;
+  color: var(--bs-heading-color);
+  gap: 5px;
+}
+button.inline {
+  position: absolute;
+  right: 0.75rem;
+  color: var(--bs-secondary);
+  border: none;
+  background: none;
+  top: 50%;
+  transform: translateY(-50%);
+  cursor: pointer;
+  line-height: 1;
+  z-index: 5;
+}
+button.inline:hover {
+  color: var(--bs-warning);
 }

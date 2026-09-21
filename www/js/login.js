@@ -42,6 +42,7 @@
         fetch('v1/login', { method: 'POST', body: JSON.stringify(request), signal: AbortSignal.timeout(timeout) }).then((r) => {
           if (r.status === 200) {
             r.json().then((obj) => {
+              sessionStorage.clear();
               document.cookie = 'X-Vault-Token=' + obj.token;
               window.location.href = 'index.html';
             });

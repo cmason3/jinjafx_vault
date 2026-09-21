@@ -51,7 +51,7 @@ import (
   "github.com/google/uuid"
 )
 
-const Version = "0.3.2"
+const Version = "0.3.3"
 
 var args struct {
   listen, tlsCrt, tlsKey string

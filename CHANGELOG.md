@@ -1,5 +1,9 @@
 ## CHANGELOG
 
+### [v0.3.3] - September 21, 2026
+- Improvements to the API Request dialogue
+- Further cosmetic enhancements to the web interface
+
 ### [v0.3.2] - September 18, 2026
 - Various cosmetic enhancements to the web interface
 - Updated the Ansible Role with some improvements
@@ -41,6 +45,7 @@
 - Initial release
 
 
+[v0.3.3]: https://github.com/cmason3/jinjafx_vault/compare/v0.3.2...v0.3.3
 [v0.3.2]: https://github.com/cmason3/jinjafx_vault/compare/v0.3.1...v0.3.2
 [v0.3.1]: https://github.com/cmason3/jinjafx_vault/compare/v0.3.0...v0.3.1
 [v0.3.0]: https://github.com/cmason3/jinjafx_vault/compare/v0.2.3...v0.3.0
