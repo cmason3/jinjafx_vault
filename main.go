@@ -383,7 +383,7 @@ func getPasswordHash(password string) (string, error) {
 
 func wwwHandler(www fs.FS) http.HandlerFunc {
   tfields := map[string]string {
-    "Version": ternary(debug, "0", Version),
+    "Version": ternary(debug, fmt.Sprintf("%s-DEBUG", Version), Version),
   }
   return func(w http.ResponseWriter, r *http.Request) {
     if r.Method == http.MethodGet {
