@@ -89,7 +89,7 @@
               } else {
                 innerHTML += '<div class="w-100"><h5 class="pb-1 text-danger">No Namespaces</h5>';
               }
-              content.innerHTML = innerHTML + '</div>';
+              content.innerHTML = innerHTML + '</div><br />';
 
               document.querySelectorAll('span[data-var]:not([data-var=""])').forEach((el) => {
                 el.addEventListener('click', (e) => {
