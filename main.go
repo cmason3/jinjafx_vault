@@ -253,16 +253,20 @@ func readVaultFile(env bool) error {
       }
     }
 
-    if vaultCipher, err = chacha20poly1305.NewX(vaultKey); err != nil {
-      return err
-    }
-
-    if plaintext, err := vaultCipher.Open(nil, b[1:chacha20poly1305.NonceSizeX + 1], b[chacha20poly1305.NonceSizeX + 1:], nil); err == nil {
-      if err := json.Unmarshal(plaintext, &vault); err != nil {
+    if len(vaultKey) == chacha20poly1305.KeySize {
+      if vaultCipher, err = chacha20poly1305.NewX(vaultKey); err != nil {
         return err
       }
+
+      if plaintext, err := vaultCipher.Open(nil, b[1:chacha20poly1305.NonceSizeX + 1], b[chacha20poly1305.NonceSizeX + 1:], nil); err == nil {
+        if err := json.Unmarshal(plaintext, &vault); err != nil {
+          return err
+        }
+      } else {
+        return fmt.Errorf("unable to decrypt vault")
+      }
     } else {
-      return err
+      return fmt.Errorf("invalid vault key length")
     }
   } else {
     return err
@@ -274,7 +278,6 @@ func readVaultFile(env bool) error {
 }
 
 func writeVaultFile(init bool) error {
-  flags := ternary(init, os.O_WRONLY|os.O_CREATE|os.O_EXCL, os.O_WRONLY)
   nonce := make([]byte, chacha20poly1305.NonceSizeX)
 
   if b, err := json.Marshal(vault); err == nil {
@@ -282,12 +285,32 @@ func writeVaultFile(init bool) error {
       ciphertext := vaultCipher.Seal(nil, nonce, b, nil)
       ciphertext = slices.Concat([]byte{ 1 }, nonce, ciphertext)
 
-      if f, err := os.OpenFile(vaultFile, flags, 0600); err == nil {
-        defer f.Close()
-        f.Write(ciphertext)
+      if init {
+        if f, err := os.OpenFile(vaultFile, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0600); err == nil {
+          defer f.Close()
 
+          if _, err := f.Write(ciphertext); err != nil {
+            return err
+          }
+        } else {
+          return err
+        }
       } else {
-        return err
+        if tmp, err := os.CreateTemp(filepath.Dir(vaultFile), "vault-*.tmp"); err == nil {
+          defer os.Remove(tmp.Name())
+
+          if _, err = tmp.Write(ciphertext); err == nil {
+            if err = tmp.Close(); err == nil {
+              if err = os.Rename(tmp.Name(), vaultFile); err == nil {
+                return nil
+              }
+            }
+          }
+          return err
+
+        } else {
+          return err
+        }
       }
     }
   } else {
@@ -383,7 +406,7 @@ func getPasswordHash(password string) (string, error) {
 
 func wwwHandler(www fs.FS) http.HandlerFunc {
   tfields := map[string]string {
-    "Version": ternary(debug, fmt.Sprintf("%s-DEBUG", Version), Version),
+    "Version": fmt.Sprintf("v%s%s", Version, ternary(debug, "-DEBUG", "")),
   }
   return func(w http.ResponseWriter, r *http.Request) {
     if r.Method == http.MethodGet {
@@ -413,7 +436,7 @@ func wwwHandler(www fs.FS) http.HandlerFunc {
         }
       }
 
-      if !debug && r.Header.Get("If-None-Match") == Version {
+      if !debug && r.Header.Get("If-None-Match") == tfields["Version"] {
         w.WriteHeader(http.StatusNotModified)
         return
       }
@@ -455,7 +478,7 @@ func wwwHandler(www fs.FS) http.HandlerFunc {
 
         } else {
           w.Header().Set("Cache-Control", "max-age=0, must-revalidate")
-          w.Header().Set("ETag", Version)
+          w.Header().Set("ETag", tfields["Version"])
         }
         w.Write(b)
 
@@ -606,6 +629,9 @@ func apiLoginHandler(w http.ResponseWriter, r *http.Request) {
     } else {
       http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
     }
+  } else if jsonErr, ok := err.(*json.SyntaxError); ok {
+    http.Error(w, fmt.Sprintf("%s at offset %d", err.Error(), jsonErr.Offset), http.StatusBadRequest)
+
   } else {
     http.Error(w, err.Error(), http.StatusBadRequest)
   }
@@ -783,6 +809,9 @@ func apiPostHandler(w http.ResponseWriter, r *http.Request) {
           } else {
             http.Error(w, "Password Verification Failed", http.StatusBadRequest)
           }
+        } else if jsonErr, ok := err.(*json.SyntaxError); ok {
+          http.Error(w, fmt.Sprintf("%s at offset %d", err.Error(), jsonErr.Offset), http.StatusBadRequest)
+
         } else {
           http.Error(w, err.Error(), http.StatusBadRequest)
         }
@@ -875,6 +904,9 @@ func apiPostHandler(w http.ResponseWriter, r *http.Request) {
             } else {
               http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
             }
+          } else if jsonErr, ok := err.(*json.SyntaxError); ok {
+            http.Error(w, fmt.Sprintf("%s at offset %d", err.Error(), jsonErr.Offset), http.StatusBadRequest)
+
           } else {
             http.Error(w, err.Error(), http.StatusBadRequest)
           }
@@ -938,6 +970,9 @@ func apiPostHandler(w http.ResponseWriter, r *http.Request) {
             } else {
               http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
             }
+          } else if jsonErr, ok := err.(*json.SyntaxError); ok {
+            http.Error(w, fmt.Sprintf("%s at offset %d", err.Error(), jsonErr.Offset), http.StatusBadRequest)
+
           } else {
             http.Error(w, err.Error(), http.StatusBadRequest)
           }
@@ -1137,6 +1172,9 @@ func apiPostHandler(w http.ResponseWriter, r *http.Request) {
             } else {
               http.Error(w, err.Error(), http.StatusInternalServerError)
             }
+          } else if jsonErr, ok := err.(*json.SyntaxError); ok {
+            http.Error(w, fmt.Sprintf("%s at offset %d", err.Error(), jsonErr.Offset), http.StatusBadRequest)
+
           } else {
             http.Error(w, err.Error(), http.StatusBadRequest)
           }
@@ -1168,6 +1206,9 @@ func apiPostHandler(w http.ResponseWriter, r *http.Request) {
             } else {
               http.Error(w, err.Error(), http.StatusInternalServerError)
             }
+          } else if jsonErr, ok := err.(*json.SyntaxError); ok {
+            http.Error(w, fmt.Sprintf("%s at offset %d", err.Error(), jsonErr.Offset), http.StatusBadRequest)
+
           } else {
             http.Error(w, err.Error(), http.StatusBadRequest)
           }
@@ -1428,7 +1469,7 @@ func main() {
   if _, defined := os.LookupEnv("JOURNAL_STREAM"); !defined {
     log.SetFlags(log.Flags() | log.Lmicroseconds)
 
-    fmt.Fprintf(os.Stdout, "JinjaFx Vault v%s\n", ternary(debug, fmt.Sprintf("%s-DEBUG", Version), Version))
+    fmt.Fprintf(os.Stdout, "JinjaFx Vault v%s%s\n", Version, ternary(debug, "-DEBUG", ""))
     fmt.Fprintf(os.Stdout, "URL https://github.com/cmason3/jinjafx_vault\n\n")
 
   } else {
@@ -1622,9 +1663,8 @@ func main() {
 
     if args.webui {
       var wwwFs fs.FS
-      var err error
 
-      if debug {
+      if stat, err := os.Stat("www"); (err == nil) && debug && stat.IsDir() {
         wwwFs = os.DirFS("www/")
 
       } else {
