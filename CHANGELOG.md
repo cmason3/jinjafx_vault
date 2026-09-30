@@ -2,6 +2,7 @@
 
 ### [v0.3.4] - September 30, 2026
 - Rewrote vault write function as it was causing vault corruption if the size of the vault decreased 
+- Improved error handling of JSON errors in POST requests
 - Further cosmetic enhancements to the web interface
 
 ### [v0.3.3] - September 21, 2026
