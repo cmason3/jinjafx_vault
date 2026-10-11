@@ -1,5 +1,11 @@
 ## CHANGELOG
 
+### [v0.3.5] - In Development
+- Upgraded github.com/go-ldap/ldap/v3 v3.4.14 => v3.4.15
+- Upgraded golang.org/x/crypto v0.57.0 => v0.58.0
+- Upgraded golang.org/x/sys v0.48.0 => v0.49.0
+- Upgraded golang.org/x/term v0.46.0 => v0.47.0
+
 ### [v0.3.4] - September 30, 2026
 - Rewrote vault write function as it was causing vault corruption if the size of the vault decreased 
 - Improved error handling of JSON errors in POST requests
@@ -50,6 +56,7 @@
 - Initial release
 
 
+[v0.3.5]: https://github.com/cmason3/jinjafx_vault/compare/v0.3.4...v0.3.5
 [v0.3.4]: https://github.com/cmason3/jinjafx_vault/compare/v0.3.3...v0.3.4
 [v0.3.3]: https://github.com/cmason3/jinjafx_vault/compare/v0.3.2...v0.3.3
 [v0.3.2]: https://github.com/cmason3/jinjafx_vault/compare/v0.3.1...v0.3.2
