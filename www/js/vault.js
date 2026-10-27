@@ -77,12 +77,12 @@
                   innerHTML += '<div class="w-100"><h5 class="pb-1 text-danger">' + ns + '<span class="text-secondary"> ' + p + '</span></h5><ul class="list-group">';
 
                   if (Object.keys(data[ns]).length) {
-                    let copy = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>';
+                    let copy = '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>';
 
                     for (let key of Object.keys(data[ns]).sort()) {
                       if (window.isSecureContext && (typeof data[ns][key]['data'] === 'string')) {
                         innerHTML += '<li class="list-group-item"><span class="data" data-ns="' + ns + '" data-var="' + key + '">' + key + '</span>';
-                        innerHTML += '<span class="copy float-end" data-copy-ns="' + ns + '" data-copy-var="' + key + '">' + copy + '</span></li>';
+                        innerHTML += '<span class="copy float-end" data-bs-toggle="tooltip" data-bs-placement="top" data-bs-title="Copied" data-copy-ns="' + ns + '" data-copy-var="' + key + '">' + copy + '</span></li>';
 
                       } else {
                         innerHTML += '<li class="list-group-item"><span class="data" data-ns="' + ns + '" data-var="' + key + '">' + key + '</span></li>';
@@ -101,7 +101,6 @@
 
               document.querySelectorAll('span[data-var]:not([data-var=""])').forEach((el) => {
                 el.addEventListener('click', (e) => {
-                  e.preventDefault();
                   document.getElementById('data-var').innerHTML = '<span class="text-danger">' + e.currentTarget.getAttribute('data-ns') + '</span><span class="text-secondary"> ' + e.currentTarget.getAttribute('data-var') + '</span>';
                   document.getElementById('data-value').innerHTML = quote(JSON.stringify(data[e.currentTarget.getAttribute('data-ns')][e.currentTarget.getAttribute('data-var')], null, 2));
                   new bootstrap.Modal(document.getElementById('data')).show();
@@ -110,10 +109,10 @@
 
               document.querySelectorAll('span[data-copy-var]:not([data-copy-var=""])').forEach((el) => {
                 el.addEventListener('click', (e) => {
-                  e.preventDefault();
-  
                   try {
+                    const tt = new bootstrap.Tooltip(e.currentTarget, { trigger: 'manual' });
                     navigator.clipboard.writeText(data[e.currentTarget.getAttribute('data-copy-ns')][e.currentTarget.getAttribute('data-copy-var')]['data']);
+                    tt.show(); setTimeout(() => tt.hide(), 500);
 
                   } catch (error) {
                     setStatus(error.message);
