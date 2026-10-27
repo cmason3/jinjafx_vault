@@ -5,12 +5,16 @@ nav.navbar {
   height: 60px;
 }
 span.key {
-  color: var(--bs-danger);
+  color: var(--bs-info);
   font-weight: bold;
 }
 span.data {
   cursor: pointer;
   color: var(--bs-link-color);
+}
+span.copy {
+  cursor: pointer;
+  color: var(--bs-secondary);
 }
 div.flex {
   display: flex;
