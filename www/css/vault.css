@@ -6,7 +6,6 @@ nav.navbar {
 }
 span.key {
   color: var(--bs-info);
-  font-weight: bold;
 }
 span.data {
   cursor: pointer;
