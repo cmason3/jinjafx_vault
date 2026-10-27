@@ -35,7 +35,7 @@
                         return -1;
                       }
                       return a[1] - b[1];
-                    }).reduce((a, c) => (a['<span class=key>' + c + '</span>'] = users[c], a), {});
+                    }).reduce((a, c) => (a['<span class=\'key\'>' + c + '</span>'] = users[c], a), {});
 
                     innerHTML += '<div class="flex">';
                     innerHTML += '<div class="w-100">';
@@ -46,7 +46,7 @@
                     innerHTML += '<pre class="ms-3 me-3 p-1 border rounded">' + JSON.stringify(Object.keys(namespaces).sort(), null, 2) + '</pre></div>';
                     content.innerHTML = innerHTML + '</div>';
                   });
-      
+
                 } else {
                   window.location.reload();
                 }
@@ -60,7 +60,7 @@
                   let r = await fetch('v1/data/' + ns, { signal: AbortSignal.timeout(timeout) });
                   if (r.status === 200) {
                     let namespace = await r.json();
-                    data[ns] = namespace
+                    data[ns] = namespace;
 
                   } else {
                     window.location.reload();
@@ -77,14 +77,22 @@
                   innerHTML += '<div class="w-100"><h5 class="pb-1 text-danger">' + ns + '<span class="text-secondary"> ' + p + '</span></h5><ul class="list-group">';
 
                   if (Object.keys(data[ns]).length) {
+                    let copy = '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>';
+
                     for (let key of Object.keys(data[ns]).sort()) {
-                      innerHTML += '<li class="list-group-item"><span class=data data-ns=' + ns + ' data-var=' + key + '>' + key + '</span></li>'
+                      if (window.isSecureContext && (typeof data[ns][key]['data'] === 'string')) {
+                        innerHTML += '<li class="list-group-item"><span class="data" data-ns="' + ns + '" data-var="' + key + '">' + key + '</span>';
+                        innerHTML += '<span class="copy float-end" data-bs-toggle="tooltip" data-bs-placement="top" data-bs-title="Copied" data-copy-ns="' + ns + '" data-copy-var="' + key + '">' + copy + '</span></li>';
+
+                      } else {
+                        innerHTML += '<li class="list-group-item"><span class="data" data-ns="' + ns + '" data-var="' + key + '">' + key + '</span></li>';
+                      }
                     }
                   } else {
-                    innerHTML += '<li class="list-group-item">No Variables</span></li>'
+                    innerHTML += '<li class="list-group-item">No Variables</span></li>';
                   }
 
-                  innerHTML += '</ul></div>'
+                  innerHTML += '</ul></div>';
                 }
               } else {
                 innerHTML += '<div class="w-100"><h5 class="pb-1 text-danger">No Namespaces</h5>';
@@ -93,10 +101,22 @@
 
               document.querySelectorAll('span[data-var]:not([data-var=""])').forEach((el) => {
                 el.addEventListener('click', (e) => {
-                  e.preventDefault();
-                  document.getElementById('data-var').innerHTML = '<span class="text-danger">' + e.target.getAttribute('data-ns') + '</span><span class="text-secondary"> ' + e.target.getAttribute('data-var') + '</span>';
-                  document.getElementById('data-value').innerHTML = quote(JSON.stringify(data[e.target.getAttribute('data-ns')][e.target.getAttribute('data-var')], null, 2));
+                  document.getElementById('data-var').innerHTML = '<span class="text-danger">' + e.currentTarget.getAttribute('data-ns') + '</span><span class="text-secondary"> ' + e.currentTarget.getAttribute('data-var') + '</span>';
+                  document.getElementById('data-value').innerHTML = quote(JSON.stringify(data[e.currentTarget.getAttribute('data-ns')][e.currentTarget.getAttribute('data-var')], null, 2));
                   new bootstrap.Modal(document.getElementById('data')).show();
+                });
+              });
+
+              document.querySelectorAll('span[data-copy-var]:not([data-copy-var=""])').forEach((el) => {
+                el.addEventListener('click', (e) => {
+                  try {
+                    const tt = new bootstrap.Tooltip(e.currentTarget, { trigger: 'manual' });
+                    navigator.clipboard.writeText(data[e.currentTarget.getAttribute('data-copy-ns')][e.currentTarget.getAttribute('data-copy-var')]['data']);
+                    tt.show(); setTimeout(() => tt.hide(), 500);
+
+                  } catch (error) {
+                    setStatus(error.message);
+                  }
                 });
               });
             }
@@ -113,11 +133,11 @@
   }
 
   function buildApiModal(e) {
-    let method = sessionStorage.getItem('api_method')
+    let method = sessionStorage.getItem('api_method');
     if (!method) method = e.value;
 
-    let url = sessionStorage.getItem(method + ':url')
-    let request = sessionStorage.getItem(method + ':request')
+    let url = sessionStorage.getItem(method + ':url');
+    let request = sessionStorage.getItem(method + ':request');
 
     if (url) {
       document.getElementById('api_url').value = url;
@@ -194,18 +214,18 @@
     });
 
     document.getElementById('api_method').addEventListener('change', (e) => {
-      sessionStorage.setItem('api_method', e.target.value);
-      buildApiModal(e.target);
+      sessionStorage.setItem('api_method', e.currentTarget.value);
+      buildApiModal(e.currentTarget);
     });
 
     document.getElementById('api_url').addEventListener('change', (e) => {
       let method = document.getElementById('api_method').value;
-      sessionStorage.setItem(method + ':url', document.getElementById('api_url').value)
+      sessionStorage.setItem(method + ':url', document.getElementById('api_url').value);
     });
 
     document.getElementById('api_request').addEventListener('change', (e) => {
       let method = document.getElementById('api_method').value;
-      sessionStorage.setItem(method + ':request', document.getElementById('api_request').value)
+      sessionStorage.setItem(method + ':request', document.getElementById('api_request').value);
     });
 
     document.getElementById('api_url').addEventListener('keyup', (e) => {

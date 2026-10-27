@@ -1,6 +1,7 @@
 ## CHANGELOG
 
-### [v0.3.5] - In Development
+### [v0.3.5] - October 27, 2026
+- Added a Copy to Clipboard button to the web interface
 - Upgraded github.com/go-ldap/ldap/v3 v3.4.14 => v3.4.15
 - Upgraded golang.org/x/crypto v0.57.0 => v0.58.0
 - Upgraded golang.org/x/sys v0.48.0 => v0.49.0
