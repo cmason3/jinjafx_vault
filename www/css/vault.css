@@ -23,6 +23,14 @@ div.flex {
   display: flex;
   gap: 25px;
 }
+div.grid {
+  display: grid;
+  grid-template-columns: auto auto auto auto;
+}
+div.grid div {
+  min-width: 200px;
+  padding: 0px 15px 20px;
+}
 pre {
   white-space: pre-wrap;
   word-wrap: break-word;
