@@ -23,12 +23,25 @@ div.flex {
   display: flex;
   gap: 25px;
 }
-div.grid {
-  display: grid;
-  grid-template-columns: auto auto auto auto;
+@media only screen and (min-width: 900px) {
+  div.grid {
+    display: grid;
+    grid-template-columns: auto auto auto auto;
+  }
+}
+@media only screen and (max-width: 900px) {
+  div.grid {
+    display: grid;
+    grid-template-columns: auto auto auto;
+  }
+}
+@media only screen and (max-width: 600px) {
+  div.grid {
+    display: grid;
+    grid-template-columns: auto auto;
+  }
 }
 div.grid div {
-  min-width: 250px;
   padding: 0px 15px 20px;
 }
 pre {
