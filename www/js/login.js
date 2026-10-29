@@ -54,7 +54,6 @@
             });
           }
         });
-
       } catch (error) {
         setStatus(error);
       }
