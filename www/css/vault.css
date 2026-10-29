@@ -11,17 +11,45 @@ span.data {
   cursor: pointer;
   color: var(--bs-link-color);
 }
+span.data:hover {
+  opacity: 0.75;
+}
 span.copy {
   cursor: pointer;
-  color: var(--bs-secondary);
+  color: #000;
+  opacity: 0.5;
   filter: invert(1) grayscale(100%) brightness(200%);
 }
 span.copy:hover {
   opacity: 0.75;
 }
-div.flex {
-  display: flex;
-  gap: 25px;
+div.grid-admin {
+  display: grid;
+  grid-template-columns: auto 20%;
+}
+div.grid-admin div {
+  padding: 0px 20px 20px;
+}
+@media only screen and (min-width: 900px) {
+  div.grid-user {
+    display: grid;
+    grid-template-columns: auto auto auto auto;
+  }
+}
+@media only screen and (max-width: 900px) {
+  div.grid-user {
+    display: grid;
+    grid-template-columns: auto auto auto;
+  }
+}
+@media only screen and (max-width: 600px) {
+  div.grid-user {
+    display: grid;
+    grid-template-columns: auto auto;
+  }
+}
+div.grid-user div {
+  padding: 0px 15px 20px;
 }
 pre {
   white-space: pre-wrap;
@@ -40,7 +68,9 @@ a.header {
 button.inline {
   position: absolute;
   right: 0.75rem;
-  color: var(--bs-secondary);
+  color: #000;
+  opacity: 0.5;
+  filter: invert(1) grayscale(100%) brightness(200%);
   border: none;
   background: none;
   top: 50%;
@@ -50,5 +80,5 @@ button.inline {
   z-index: 5;
 }
 button.inline:hover {
-  color: var(--bs-warning);
+  opacity: 0.75;
 }

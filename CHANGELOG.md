@@ -1,7 +1,13 @@
 ## CHANGELOG
 
+### [v0.3.6] - October 29, 2026
+- Updated layout of "Admin" view to use tables
+- Updated layout of "User" view to use grid as opposed to flex
+- Added "Logout" button to change password dialog
+- Default view is now "User" view
+
 ### [v0.3.5] - October 27, 2026
-- Added a Copy to Clipboard button to the web interface
+- Added a copy to clipboard button to the web interface
 - Upgraded github.com/go-ldap/ldap/v3 v3.4.14 => v3.4.15
 - Upgraded golang.org/x/crypto v0.57.0 => v0.58.0
 - Upgraded golang.org/x/sys v0.48.0 => v0.49.0
@@ -57,6 +63,7 @@
 - Initial release
 
 
+[v0.3.6]: https://github.com/cmason3/jinjafx_vault/compare/v0.3.5...v0.3.6
 [v0.3.5]: https://github.com/cmason3/jinjafx_vault/compare/v0.3.4...v0.3.5
 [v0.3.4]: https://github.com/cmason3/jinjafx_vault/compare/v0.3.3...v0.3.4
 [v0.3.3]: https://github.com/cmason3/jinjafx_vault/compare/v0.3.2...v0.3.3

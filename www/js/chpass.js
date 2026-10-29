@@ -24,6 +24,23 @@
       document.getElementById('loginPassword').focus();
     });
 
+    document.getElementById('logout').addEventListener('click', (e) => {
+      try {
+        fetch('v1/logout', { method: 'POST', signal: AbortSignal.timeout(timeout) }).then((r) => {
+          if (r.status === 204) {
+            window.location.href = 'login.html';
+
+          } else {
+            r.text().then((msg) => {
+              setStatus('<b>HTTP ' + r.status + '</b> ' + msg);
+            });
+          }
+        });
+      } catch (error) {
+        setStatus(error);
+      }
+    });
+
     document.getElementById('submit').addEventListener('click', (e) => {
       if (document.getElementById('loginPassword').value.trim().length === 0) {
         document.getElementById('loginPassword').focus();
@@ -60,7 +77,6 @@
             });
           }
         });
-
       } catch (error) {
         setStatus(error);
       }

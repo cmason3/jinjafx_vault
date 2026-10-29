@@ -30,28 +30,94 @@
               fetch('v1/users', { signal: AbortSignal.timeout(timeout) }).then((r) => {
                 if (r.status === 200) {
                   r.json().then((users) => {
-                    let u = Object.keys(users).sort((a, b) => {
+                    innerHTML += '<h5 class="pt-2 pb-3">Vault Users</h5>';
+                    innerHTML += '<div class="grid-admin">';
+                    innerHTML += '<div>';
+                    innerHTML += '<table class="table table-bordered">';
+                    innerHTML += '<thead>';
+                    innerHTML += '<tr><th>User</th><th>Roles</th><th>Authentication</th><th>Namespaces</th><th>Status</th>';
+                    innerHTML += '</thead>';
+                    innerHTML += '<tbody class="font-monospace">';
+
+                    for (let u of Object.keys(users).sort((a, b) => {
                       if (a === 'root') {
                         return -1;
                       }
                       return a[1] - b[1];
-                    }).reduce((a, c) => (a['<span class=\'key\'>' + c + '</span>'] = users[c], a), {});
+                    })) {
+                      innerHTML += '<tr>';
+                      innerHTML += '<td>' + quote(u) + '</td>';
 
-                    innerHTML += '<div class="flex">';
-                    innerHTML += '<div class="w-100">';
-                    innerHTML += '<h5 class="pt-2 pb-3">Vault Users</h5>';
-                    innerHTML += '<pre class="ms-3 me-3 p-1 border rounded">' + JSON.stringify(u, null, 2) + '</pre></div>';
-                    innerHTML += '<div class="w-100">';
-                    innerHTML += '<h5 class="pt-2 pb-3">Vault Namespaces</h5>';
-                    innerHTML += '<pre class="ms-3 me-3 p-1 border rounded">' + JSON.stringify(Object.keys(namespaces).sort(), null, 2) + '</pre></div>';
+                      innerHTML += '<td>';
+                      let nroles = users[u]['roles'].length;
+                      for (let r of users[u]['roles'].sort()) {
+                        if (r === 'admin') {
+                          innerHTML += '<span class="badge text-bg-danger' + (--nroles ? ' me-2' : '') + '">Admin</span>';
+
+                        } else if (r === 'user') {
+                          innerHTML += '<span class="badge text-bg-primary' + (--nroles ? ' me-2' : '') + '">User</span>';
+                        }
+                      }
+                      innerHTML += '</td>';
+
+                      if (users[u].hasOwnProperty('password')) {
+                        innerHTML += '<td><span class="badge text-bg-secondary">Local</span></td>';
+
+                      } else if (users[u].hasOwnProperty('ldap_server')) {
+                        innerHTML += '<td><span class="badge text-bg-primary">LDAP</span></td>';
+                      }
+
+                      if (users[u].hasOwnProperty('namespaces')) {
+                        innerHTML += '<td>';
+                        for (let ns of Object.keys(users[u]['namespaces']).sort()) {
+                          if (users[u]['namespaces'][ns] === 'rw') {
+                            innerHTML += '<span class="me-2">' + quote(ns) + '</span><span class="badge text-bg-danger">Rw</span><br />';
+
+                          } else {
+                            innerHTML += '<span class="me-2">' + quote(ns) + '</span><span class="badge text-bg-primary">Ro</span><br />';
+                          }
+                        }
+                        innerHTML += '</td>';
+
+                      } else {
+                        innerHTML += '<td>-</td>';
+                      }
+
+                      if (users[u].hasOwnProperty('password') && !users[u].hasOwnProperty('last_changed')) {
+                        innerHTML += '<td><span class="badge text-bg-warning">Expired</span></td>';
+                      }
+                      else if (users[u]['disabled']) {
+                        innerHTML += '<td><span class="badge text-bg-danger">Disabled</span></td>';
+
+                      } else {
+                        innerHTML += '<td><span class="badge text-bg-success">Enabled</span></td>';
+                      }
+                      innerHTML += '</tr>';
+                    }
+
+                    innerHTML += '</tbody>';
+                    innerHTML += '</table>';
+                    innerHTML += '</div>';
+
+                    innerHTML += '<div>';
+                    innerHTML += '<table class="table table-bordered">';
+                    innerHTML += '<thead>';
+                    innerHTML += '<tr><th>All Namespaces</th>';
+                    innerHTML += '</thead>';
+                    innerHTML += '<tbody class="font-monospace">';
+
+                    for (let ns of Object.keys(namespaces).sort()) {
+                      innerHTML += '<tr><td>' + quote(ns) + '</td></tr>';
+                    }
+
+                    innerHTML += '</tbody>';
+                    innerHTML += '</table>';
                     content.innerHTML = innerHTML + '</div>';
                   });
-
                 } else {
                   window.location.reload();
                 }
               });
-
             } else {
               let data = {};
 
@@ -69,12 +135,12 @@
               }
 
               innerHTML += '<h5 class="pt-2 pb-3">Namespace Variables</h5>';
-              innerHTML += '<div class="ps-3 pe-3 flex">';
+              innerHTML += '<div class="ps-3 pe-3 grid-user">';
 
               if (Object.keys(data).length) {
                 for (let ns of Object.keys(data).sort()) {
                   let p = namespaces[ns].replace('ro', 'read-only').replace('rw', 'read/write');
-                  innerHTML += '<div class="w-100"><h5 class="pb-1 text-danger">' + ns + '<span class="text-secondary"> ' + p + '</span></h5><ul class="list-group">';
+                  innerHTML += '<div><h5 class="pb-1 text-danger">' + ns + '<span class="text-secondary"> ' + p + '</span></h5><ul class="list-group">';
 
                   if (Object.keys(data[ns]).length) {
                     let copy = '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>';
@@ -125,7 +191,6 @@
           window.location.reload();
         }
       });
-
     } catch (error) {
       content.innerHTML = '';
       setStatus(error);
@@ -199,7 +264,6 @@
             });
           }
         });
-
       } catch (error) {
         setStatus(error);
       }
@@ -263,7 +327,6 @@
               buildPage();
             }
           });
-
         } else if (document.getElementById('api_method').value === 'DELETE') {
           bootstrap.Modal.getInstance(document.getElementById('api_modal')).hide();
           fetch('v1/' + document.getElementById('api_url').value, { method: 'DELETE', signal: AbortSignal.timeout(timeout) }).then((r) => {
@@ -279,7 +342,6 @@
               buildPage();
             }
           });
-
         } else {
           fetch('v1/' + document.getElementById('api_url').value, { method: 'GET', signal: AbortSignal.timeout(timeout) }).then((r) => {
             if ((r.status === 401) || (r.status === 418)) {
@@ -323,7 +385,7 @@
             }
 
             if (active === null) {
-              sessionStorage.setItem('active', obj.roles.includes('admin') ? 'admin' : 'user');
+              sessionStorage.setItem('active', obj.roles.includes('user') ? 'user' : 'admin');
             }
 
             for (let role of ['admin', 'user']) {
@@ -338,14 +400,12 @@
             document.getElementById('userid').innerHTML = obj.user;
             buildPage();
           });
-
         } else {
           r.text().then((msg) => {
             setStatus('<b>HTTP ' + r.status + '</b> ' + msg);
           });
         }
       });
-
     } catch (error) {
       setStatus(error);
     }
