@@ -74,7 +74,7 @@
                             innerHTML += '<span class="me-2">' + quote(ns) + '</span><span class="badge text-bg-danger">Rw</span><br />';
 
                           } else {
-                            innerHTML += '<span class="me-2">' + quote(ns) + '</span><span class="badge text-bg-primary">Oo</span><br />';
+                            innerHTML += '<span class="me-2">' + quote(ns) + '</span><span class="badge text-bg-primary">Ro</span><br />';
                           }
                         }
                         innerHTML += '</td>';

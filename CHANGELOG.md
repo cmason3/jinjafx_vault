@@ -1,6 +1,6 @@
 ## CHANGELOG
 
-### [v0.3.6] - In Development
+### [v0.3.6] - October 29, 2026
 - Updated layout of "Admin" view to use tables
 - Updated layout of "User" view to use grid as opposed to flex
 - Added "Logout" button to change password dialog
