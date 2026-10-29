@@ -30,7 +30,8 @@
               fetch('v1/users', { signal: AbortSignal.timeout(timeout) }).then((r) => {
                 if (r.status === 200) {
                   r.json().then((users) => {
-                    innerHTML += '<div class="pt-3 grid-admin">';
+                    innerHTML += '<h5 class="pt-2 pb-3">Vault Users</h5>';
+                    innerHTML += '<div class="grid-admin">';
                     innerHTML += '<div>';
                     innerHTML += '<table class="table table-bordered">';
                     innerHTML += '<thead>';
