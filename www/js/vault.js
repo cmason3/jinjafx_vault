@@ -385,7 +385,7 @@
             }
 
             if (active === null) {
-              sessionStorage.setItem('active', obj.roles.includes('admin') ? 'admin' : 'user');
+              sessionStorage.setItem('active', obj.roles.includes('user') ? 'user' : 'admin');
             }
 
             for (let role of ['admin', 'user']) {
