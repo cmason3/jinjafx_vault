@@ -23,12 +23,6 @@ span.copy {
 span.copy:hover {
   opacity: 0.75;
 }
-/*
-div.flex {
-  display: flex;
-  gap: 25px;
-}
-*/
 div.grid-admin {
   display: grid;
   grid-template-columns: auto 20%;

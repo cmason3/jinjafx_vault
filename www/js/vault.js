@@ -71,10 +71,10 @@
                         innerHTML += '<td>';
                         for (let ns of Object.keys(users[u]['namespaces']).sort()) {
                           if (users[u]['namespaces'][ns] === 'rw') {
-                            innerHTML += '<span class="me-2">' + quote(ns) + '</span><span class="badge text-bg-danger">rw</span><br />';
+                            innerHTML += '<span class="me-2">' + quote(ns) + '</span><span class="badge text-bg-danger">Rw</span><br />';
 
                           } else {
-                            innerHTML += '<span class="me-2">' + quote(ns) + '</span><span class="badge text-bg-primary">ro</span><br />';
+                            innerHTML += '<span class="me-2">' + quote(ns) + '</span><span class="badge text-bg-primary">Oo</span><br />';
                           }
                         }
                         innerHTML += '</td>';
