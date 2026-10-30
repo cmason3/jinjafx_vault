@@ -59,7 +59,7 @@
                         }
                       }
                       innerHTML += '</td>';
-                      innerHTML += '<td>' + users[u].description + '</td>';
+                      innerHTML += '<td>' + quote(users[u].description) + '</td>';
 
                       if (users[u].hasOwnProperty('password')) {
                         innerHTML += '<td>Local</td>';
