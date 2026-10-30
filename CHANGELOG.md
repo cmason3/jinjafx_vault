@@ -3,6 +3,7 @@
 ### [v0.3.7] - In Development
 - Fixed an issue where user expiry via chage wasn't working
 - Further cosmetic enhancements to the web interface
+- Resetting the Vault now re-enables a disabled root account
 - Added "Description" field to user struct.
 
 ### [v0.3.6] - October 29, 2026

@@ -1653,6 +1653,7 @@ func main() {
       if h, err := getPasswordHash(p); err == nil {
         vault.Users["root"].Password = h
         vault.Users["root"].LastChanged = time.Now().UTC()
+        vault.Users["root"].Disabled = false
 
       } else {
         fmt.Fprintf(os.Stderr, "Error: %v\n", err)
