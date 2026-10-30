@@ -1,10 +1,14 @@
 ## CHANGELOG
 
+### [v0.3.7] - In Development
+- Fixed an issue where user expiry via chage wasn't working
+- Further cosmetic enhancements to the web interface
+
 ### [v0.3.6] - October 29, 2026
 - Updated layout of "Admin" view to use tables
 - Updated layout of "User" view to use grid as opposed to flex
 - Added "Logout" button to change password dialog
-- Default view is now "User" view
+- Default view is now the "User" view
 
 ### [v0.3.5] - October 27, 2026
 - Added a copy to clipboard button to the web interface
@@ -63,6 +67,7 @@
 - Initial release
 
 
+[v0.3.7]: https://github.com/cmason3/jinjafx_vault/compare/v0.3.6...v0.3.7
 [v0.3.6]: https://github.com/cmason3/jinjafx_vault/compare/v0.3.5...v0.3.6
 [v0.3.5]: https://github.com/cmason3/jinjafx_vault/compare/v0.3.4...v0.3.5
 [v0.3.4]: https://github.com/cmason3/jinjafx_vault/compare/v0.3.3...v0.3.4

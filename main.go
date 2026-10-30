@@ -51,7 +51,7 @@ import (
   "github.com/google/uuid"
 )
 
-const Version = "0.3.6"
+const Version = "0.3.7"
 
 var args struct {
   listen, tlsCrt, tlsKey string
@@ -69,6 +69,7 @@ type user struct {
   Expiry string `json:"expiry,omitempty"`
   LdapServer string `json:"ldap_server,omitempty"`
   LdapDomain string `json:"ldap_domain,omitempty"`
+  Flags []string `json:"flags,omitempty"`
   Disabled bool `json:"disabled"`
 }
 type data struct {
@@ -174,9 +175,9 @@ func isUserExpired(u string) bool {
 
   if ln := len(vault.Users[u].Expiry); ln > 0 {
     var d time.Duration
-    n, _ := strconv.Atoi(vault.Users[u].Expiry[ln-2:])
+    n, _ := strconv.Atoi(vault.Users[u].Expiry[:ln-2])
 
-    switch vault.Users[u].Expiry[:ln-2] {
+    switch vault.Users[u].Expiry[ln-2:] {
       case "hr":
         d = time.Duration(n) * time.Hour
       case "dy":
@@ -188,7 +189,7 @@ func isUserExpired(u string) bool {
       case "yr":
         d = time.Duration(n) * time.Hour * 24 * 365
     }
-
+    
     if time.Now().UTC().After(vault.Users[u].LastChanged.Add(d)) {
       return true
     }
@@ -677,9 +678,20 @@ func apiGetHandler(w http.ResponseWriter, r *http.Request) {
           w.Header().Set("Content-Type", "application/json")
           w.WriteHeader(http.StatusOK)
 
+          rs := make(map[string]*user)
+          r, _ := json.Marshal(vault.Users)
+          json.Unmarshal(r, &rs)
+
+          for u := range vault.Users {
+            if isUserExpired(u) {
+              fmt.Fprintf(os.Stdout, "User %s has expired\n", u)
+              rs[u].Flags = []string{"expired"}
+            }
+          }
+
           e := json.NewEncoder(w)
           e.SetIndent("", "  ")
-          e.Encode(vault.Users)
+          e.Encode(rs)
 
         } else {
           http.Error(w, "Insufficient Privileges", http.StatusForbidden)

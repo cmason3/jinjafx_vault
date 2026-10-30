@@ -30,14 +30,16 @@
               fetch('v1/users', { signal: AbortSignal.timeout(timeout) }).then((r) => {
                 if (r.status === 200) {
                   r.json().then((users) => {
-                    innerHTML += '<h5 class="pt-2 pb-3">Vault Users</h5>';
-                    innerHTML += '<div class="grid-admin">';
+                    let nscount = {};
+
+                    innerHTML += '<div class="pt-2 pb-2 grid-admin">';
                     innerHTML += '<div>';
+                    innerHTML += '<h5 class="pb-3">Vault Users</h5>';
                     innerHTML += '<table class="table table-bordered">';
                     innerHTML += '<thead>';
                     innerHTML += '<tr><th>User</th><th>Roles</th><th>Authentication</th><th>Namespaces</th><th>Status</th>';
                     innerHTML += '</thead>';
-                    innerHTML += '<tbody class="font-monospace">';
+                    innerHTML += '<tbody>';
 
                     for (let u of Object.keys(users).sort((a, b) => {
                       if (a === 'root') {
@@ -55,26 +57,32 @@
                           innerHTML += '<span class="badge text-bg-danger' + (--nroles ? ' me-2' : '') + '">Admin</span>';
 
                         } else if (r === 'user') {
-                          innerHTML += '<span class="badge text-bg-primary' + (--nroles ? ' me-2' : '') + '">User</span>';
+                          innerHTML += '<span class="badge text-bg-light' + (--nroles ? ' me-2' : '') + '">User</span>';
                         }
                       }
                       innerHTML += '</td>';
 
                       if (users[u].hasOwnProperty('password')) {
-                        innerHTML += '<td><span class="badge text-bg-secondary">Local</span></td>';
+                        innerHTML += '<td>Local</td>';
 
                       } else if (users[u].hasOwnProperty('ldap_server')) {
-                        innerHTML += '<td><span class="badge text-bg-primary">LDAP</span></td>';
+                        innerHTML += '<td>LDAP</td>';
                       }
 
-                      if (users[u].hasOwnProperty('namespaces')) {
+                      if (users[u].hasOwnProperty('namespaces') && Object.keys(users[u]['namespaces']).length) {
                         innerHTML += '<td>';
                         for (let ns of Object.keys(users[u]['namespaces']).sort()) {
                           if (users[u]['namespaces'][ns] === 'rw') {
-                            innerHTML += '<span class="me-2">' + quote(ns) + '</span><span class="badge text-bg-danger">Rw</span><br />';
+                            innerHTML += '<span class="me-2 font-monospace">' + quote(ns) + '</span><span class="badge text-bg-danger">r/w</span><br />';
 
                           } else {
-                            innerHTML += '<span class="me-2">' + quote(ns) + '</span><span class="badge text-bg-primary">Ro</span><br />';
+                            innerHTML += '<span class="me-2 font-monospace">' + quote(ns) + '</span><span class="badge text-bg-light">ro</span><br />';
+                          }
+                          if (ns in nscount) {
+                            nscount[ns]++;
+
+                          } else {
+                            nscount[ns] = 1;
                           }
                         }
                         innerHTML += '</td>';
@@ -83,14 +91,14 @@
                         innerHTML += '<td>-</td>';
                       }
 
-                      if (users[u].hasOwnProperty('password') && !users[u].hasOwnProperty('last_changed')) {
+                      if (users[u].hasOwnProperty('flags') && users[u].flags.includes('expired')) {
                         innerHTML += '<td><span class="badge text-bg-warning">Expired</span></td>';
                       }
                       else if (users[u]['disabled']) {
                         innerHTML += '<td><span class="badge text-bg-danger">Disabled</span></td>';
 
                       } else {
-                        innerHTML += '<td><span class="badge text-bg-success">Enabled</span></td>';
+                        innerHTML += '<td><span class="badge text-bg-light">Enabled</span></td>';
                       }
                       innerHTML += '</tr>';
                     }
@@ -100,14 +108,22 @@
                     innerHTML += '</div>';
 
                     innerHTML += '<div>';
-                    innerHTML += '<table class="table table-bordered">';
-                    innerHTML += '<thead>';
-                    innerHTML += '<tr><th>All Namespaces</th>';
-                    innerHTML += '</thead>';
-                    innerHTML += '<tbody class="font-monospace">';
+                    innerHTML += '<h5 class="pb-3">Namespaces</h5>';
 
-                    for (let ns of Object.keys(namespaces).sort()) {
-                      innerHTML += '<tr><td>' + quote(ns) + '</td></tr>';
+                    if (Object.keys(namespaces).length) {
+                      innerHTML += '<table class="table table-bordered text-center">';
+                      innerHTML += '<thead>';
+                      innerHTML += '<tr><th>Name</th><th>Variables</th><th>Users</th>';
+                      innerHTML += '</thead>';
+                      innerHTML += '<tbody>';
+
+                      for (let ns of Object.keys(namespaces).sort()) {
+                        innerHTML += '<tr><td class="font-monospace">' + quote(ns) + '</td><td>' + namespaces[ns].length + '</td><td>' + (ns in nscount ? nscount[ns] : '0') + '</td></tr>';
+                      }
+                    } else {
+                      innerHTML += '<table class="table table-borderless">';
+                      innerHTML += '<tbody>';
+                      innerHTML += '<tr><td class="text-danger">No Namespaces</td></tr>';
                     }
 
                     innerHTML += '</tbody>';
@@ -134,13 +150,13 @@
                 }
               }
 
-              innerHTML += '<h5 class="pt-2 pb-3">Namespace Variables</h5>';
-              innerHTML += '<div class="ps-3 pe-3 grid-user">';
+              innerHTML += '<h5 class="ps-2 pt-2">Namespace Variables</h5>';
+              innerHTML += '<div class="ps-3 pe-3 pb-2 grid-user">';
 
               if (Object.keys(data).length) {
                 for (let ns of Object.keys(data).sort()) {
                   let p = namespaces[ns].replace('ro', 'read-only').replace('rw', 'read/write');
-                  innerHTML += '<div><h5 class="pb-1 text-danger">' + ns + '<span class="text-secondary"> ' + p + '</span></h5><ul class="list-group">';
+                  innerHTML += '<div class="pt-3"><h5 class="pb-1 text-danger"><span class="font-monospace">' + ns + '</span><span class="text-secondary"> ' + p + '</span></h5><ul class="list-group">';
 
                   if (Object.keys(data[ns]).length) {
                     let copy = '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>';
@@ -161,7 +177,7 @@
                   innerHTML += '</ul></div>';
                 }
               } else {
-                innerHTML += '<div class="w-100"><h5 class="pb-1 text-danger">No Namespaces</h5>';
+                innerHTML += '<div class="pt-3 w-100"><h5 class="text-danger">No Namespaces</h5>';
               }
               content.innerHTML = innerHTML + '</div><br />';
 
