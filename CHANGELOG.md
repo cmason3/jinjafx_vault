@@ -3,6 +3,7 @@
 ### [v0.3.7] - In Development
 - Fixed an issue where user expiry via chage wasn't working
 - Further cosmetic enhancements to the web interface
+- Added "Description" field to user struct.
 
 ### [v0.3.6] - October 29, 2026
 - Updated layout of "Admin" view to use tables

@@ -444,6 +444,7 @@ There is also a JinjaFx Vault Ansible role that provides a similar `jinjafx_vaul
  #### Required Data
  ```json
  {
+   "description": "<description>",
    "password": "<password>"
  }
  ```
@@ -461,7 +462,7 @@ There is also a JinjaFx Vault Ansible role that provides a similar `jinjafx_vaul
 
  #### Example Request
  ```
- curl -sS -X POST -H "X-Vault-Token: $TOKEN" -d '{ "password": "<password>" }' https://localhost:8443/v1/user/<user>/userpass
+ curl -sS -X POST -H "X-Vault-Token: $TOKEN" -d '{ "description": "<description>", "password": "<password>" }' https://localhost:8443/v1/user/<user>/userpass
  ```
  <hr>
 
@@ -482,6 +483,7 @@ There is also a JinjaFx Vault Ansible role that provides a similar `jinjafx_vaul
  #### Required Data
  ```json
  {
+   "description": "<description>",
    "ldap_server": "<ldap server>",
    "ldap_domain": "<ldap domain>"
  }
@@ -500,7 +502,7 @@ There is also a JinjaFx Vault Ansible role that provides a similar `jinjafx_vaul
 
  #### Example Request
  ```
- curl -sS -X POST -H "X-Vault-Token: $TOKEN" -d '{ "ldap_server": "<ldap server>", "ldap_domain": "<ldap domain>" }' https://localhost:8443/v1/user/<user>/ldaps
+ curl -sS -X POST -H "X-Vault-Token: $TOKEN" -d '{ "description": "<description>", "ldap_server": "<ldap server>", "ldap_domain": "<ldap domain>" }' https://localhost:8443/v1/user/<user>/ldaps
  ```
  <hr>
 

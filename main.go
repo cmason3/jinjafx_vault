@@ -63,6 +63,7 @@ var args struct {
 
 type user struct {
   Roles []string `json:"roles"`
+  Description string `json:"description"`
   Namespaces map[string]string `json:"namespaces,omitzero"`
   Password string `json:"password,omitempty"`
   LastChanged time.Time `json:"last_changed,omitzero"`
@@ -684,7 +685,6 @@ func apiGetHandler(w http.ResponseWriter, r *http.Request) {
 
           for u := range vault.Users {
             if isUserExpired(u) {
-              fmt.Fprintf(os.Stdout, "User %s has expired\n", u)
               rs[u].Flags = []string{"expired"}
             }
           }
@@ -861,60 +861,75 @@ func apiPostHandler(w http.ResponseWriter, r *http.Request) {
 
         if slices.Contains(vault.Users[ruser].Roles, "admin") {
           var request struct {
+            Description string `json:"description"`
             Password string `json:"password"`
           }
 
           if err := json.NewDecoder(r.Body).Decode(&request); err == nil {
-            if len(request.Password) > 0 {
+            var cflag int
+            _, ok := vault.Users[u]
+
+            if !ok && (len(request.Password) > 0) && (len(request.Description) > 0) {
               if ok, err := isPasswordValid(request.Password, ""); ok {
                 if h, err := getPasswordHash(request.Password); err == nil {
-                  var cflag int
-
-                  if _, ok := vault.Users[u]; !ok {
-                    vault.Users[u] = &user {
-                      Roles: []string{"user"},
-                      Password: h,
-                      LastChanged: time.Now().UTC(),
-                      Namespaces: make(map[string]string),
-                    }
-
-                    cflag = 1
-
-                  } else if len(vault.Users[u].Password) > 0 {
-                    if !verifyPassword(request.Password, vault.Users[u].Password) {
-                      vault.Users[u].Password = h
-                      vault.Users[u].LastChanged = time.Now().UTC()
-                      cflag = 2
-                    }
-                  } else {
-                    http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
-                    return
+                  vault.Users[u] = &user {
+                    Roles: []string{"user"},
+                    Description: request.Description,
+                    Password: h,
+                    LastChanged: time.Now().UTC(),
+                    Namespaces: make(map[string]string),
                   }
 
-                  if cflag > 0 {
-                    vault.Audit[time.Now().UTC()] = &audit {
-                      User: ruser,
-                      Address: w.(*httpWriter).remoteHost,
-                      Message: fmt.Sprintf("%s UserPass User '%s'", ternary(cflag == 1, "Created", "Updated"), u),
-                    }
+                  cflag = 1
 
-                    if err := writeVaultFile(false); err == nil {
-                      w.WriteHeader(ternary(cflag == 1, http.StatusCreated, http.StatusNoContent))
-
-                    } else {
-                      http.Error(w, err.Error(), http.StatusInternalServerError)
-                    }
-                  } else {
-                    http.Error(w, "User Not Modified", http.StatusNotModified)
-                  }
                 } else {
                   http.Error(w, err.Error(), http.StatusInternalServerError)
+                  return
                 }
               } else {
                 http.Error(w, err.Error(), http.StatusBadRequest)
+                return
+              }
+            } else if ok {
+              if len(request.Description) > 0 {
+                if vault.Users[u].Description != request.Description {
+                  vault.Users[u].Description = request.Description
+                  cflag = 2
+                }
+              }
+              if len(request.Password) > 0 {
+                if !verifyPassword(request.Password, vault.Users[u].Password) {
+                  if h, err := getPasswordHash(request.Password); err == nil {
+                    vault.Users[u].Password = h
+                    vault.Users[u].LastChanged = time.Now().UTC()
+                    cflag = 2
+
+                  } else {
+                    http.Error(w, err.Error(), http.StatusInternalServerError)
+                    return
+                  }
+                }
               }
             } else {
               http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
+              return
+            }
+
+            if cflag > 0 {
+              vault.Audit[time.Now().UTC()] = &audit {
+                User: ruser,
+                Address: w.(*httpWriter).remoteHost,
+                Message: fmt.Sprintf("%s UserPass User '%s'", ternary(cflag == 1, "Created", "Updated"), u),
+              }
+
+              if err := writeVaultFile(false); err == nil {
+                w.WriteHeader(ternary(cflag == 1, http.StatusCreated, http.StatusNoContent))
+
+              } else {
+                http.Error(w, err.Error(), http.StatusInternalServerError)
+              }
+            } else {
+              http.Error(w, "User Not Modified", http.StatusNotModified)
             }
           } else if jsonErr, ok := err.(*json.SyntaxError); ok {
             http.Error(w, fmt.Sprintf("%s at offset %d", err.Error(), jsonErr.Offset), http.StatusBadRequest)
@@ -930,57 +945,65 @@ func apiPostHandler(w http.ResponseWriter, r *http.Request) {
 
         if slices.Contains(vault.Users[ruser].Roles, "admin") {
           var request struct {
+            Description string `json:"description"`
             LdapServer string `json:"ldap_server"`
             LdapDomain string `json:"ldap_domain"`
           }
 
           if err := json.NewDecoder(r.Body).Decode(&request); err == nil {
-            if (len(request.LdapServer) > 0) && (len(request.LdapDomain) > 0) {
-              var cflag int
+            var cflag int
+            _, ok := vault.Users[u]
 
-              if _, ok := vault.Users[u]; !ok {
-                vault.Users[u] = &user {
-                  Roles: []string{"user"},
-                  LdapServer: request.LdapServer,
-                  LdapDomain: request.LdapDomain,
-                  Namespaces: make(map[string]string),
+            if !ok && (len(request.LdapServer) > 0) && (len(request.LdapDomain) > 0) && (len(request.Description) > 0) {
+              vault.Users[u] = &user {
+                Roles: []string{"user"},
+                Description: request.Description,
+                LdapServer: request.LdapServer,
+                LdapDomain: request.LdapDomain,
+                Namespaces: make(map[string]string),
+              }
+
+              cflag = 1
+
+            } else if ok {
+              if len(vault.Users[u].Description) > 0 {
+                if vault.Users[u].Description != request.Description {
+                  vault.Users[u].Description = request.Description
+                  cflag = 2
                 }
-
-                cflag = 1
-
-              } else if len(vault.Users[u].LdapServer) > 0 {
+              }
+              if len(vault.Users[u].LdapServer) > 0 {
                 if vault.Users[u].LdapServer != request.LdapServer {
                   vault.Users[u].LdapServer = request.LdapServer
                   cflag = 2
                 }
-
+              }
+              if len(vault.Users[u].LdapDomain) > 0 {
                 if vault.Users[u].LdapDomain != request.LdapDomain {
                  vault.Users[u].LdapDomain = request.LdapDomain
                   cflag = 2
                 }
-              } else {
-                http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
-                return
-              }
-
-              if cflag > 0 {
-                vault.Audit[time.Now().UTC()] = &audit {
-                  User: ruser,
-                  Address: w.(*httpWriter).remoteHost,
-                  Message: fmt.Sprintf("%s LDAP User '%s'", ternary(cflag == 1, "Created", "Updated"), u),
-                }
-
-                if err := writeVaultFile(false); err == nil {
-                  w.WriteHeader(ternary(cflag == 1, http.StatusCreated, http.StatusNoContent))
-
-                } else {
-                  http.Error(w, err.Error(), http.StatusInternalServerError)
-                }
-              } else {
-                http.Error(w, "User Not Modified", http.StatusNotModified)
-              }
+              } 
             } else {
               http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
+              return
+            }
+
+            if cflag > 0 {
+              vault.Audit[time.Now().UTC()] = &audit {
+                User: ruser,
+                Address: w.(*httpWriter).remoteHost,
+                Message: fmt.Sprintf("%s LDAP User '%s'", ternary(cflag == 1, "Created", "Updated"), u),
+              }
+
+              if err := writeVaultFile(false); err == nil {
+                w.WriteHeader(ternary(cflag == 1, http.StatusCreated, http.StatusNoContent))
+
+              } else {
+                http.Error(w, err.Error(), http.StatusInternalServerError)
+              }
+            } else {
+              http.Error(w, "User Not Modified", http.StatusNotModified)
             }
           } else if jsonErr, ok := err.(*json.SyntaxError); ok {
             http.Error(w, fmt.Sprintf("%s at offset %d", err.Error(), jsonErr.Offset), http.StatusBadRequest)
@@ -1582,6 +1605,7 @@ func main() {
       if h, err := getPasswordHash(p); err == nil {
         vault.Users["root"] = &user {
           Roles: []string{"admin"},
+          Description: "Default Admin User",
           Password: h,
           LastChanged: time.Now().UTC(),
         }

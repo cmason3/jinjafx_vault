@@ -37,7 +37,7 @@
                     innerHTML += '<h5 class="pb-3">Vault Users</h5>';
                     innerHTML += '<table class="table table-bordered">';
                     innerHTML += '<thead>';
-                    innerHTML += '<tr><th>User</th><th>Roles</th><th>Authentication</th><th>Namespaces</th><th>Status</th>';
+                    innerHTML += '<tr><th>User</th><th>Roles</th><th>Description</th><th>Authentication</th><th>Namespaces</th><th>Status</th>';
                     innerHTML += '</thead>';
                     innerHTML += '<tbody>';
 
@@ -61,6 +61,7 @@
                         }
                       }
                       innerHTML += '</td>';
+                      innerHTML += '<td>' + users[u].description + '</td>';
 
                       if (users[u].hasOwnProperty('password')) {
                         innerHTML += '<td>Local</td>';
