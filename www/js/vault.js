@@ -30,8 +30,6 @@
               fetch('v1/users', { signal: AbortSignal.timeout(timeout) }).then((r) => {
                 if (r.status === 200) {
                   r.json().then((users) => {
-                    let nscount = {};
-
                     innerHTML += '<div class="pt-2 pb-2 grid-admin">';
                     innerHTML += '<div>';
                     innerHTML += '<h5 class="pb-3">Vault Users</h5>';
@@ -67,7 +65,7 @@
                         innerHTML += '<td>Local</td>';
 
                       } else if (users[u].hasOwnProperty('ldap_server')) {
-                        innerHTML += '<td>LDAP</td>';
+                        innerHTML += '<td>ldaps://' + users[u].ldap_server + '</td>';
                       }
 
                       if (users[u].hasOwnProperty('namespaces') && Object.keys(users[u]['namespaces']).length) {
@@ -78,12 +76,6 @@
 
                           } else {
                             innerHTML += '<span class="me-2 font-monospace">' + quote(ns) + '</span><span class="badge text-bg-light">ro</span><br />';
-                          }
-                          if (ns in nscount) {
-                            nscount[ns]++;
-
-                          } else {
-                            nscount[ns] = 1;
                           }
                         }
                         innerHTML += '</td>';
@@ -110,20 +102,14 @@
 
                     innerHTML += '<div>';
                     innerHTML += '<h5 class="pb-3">Namespaces</h5>';
+                    innerHTML += '<table class="table table-borderless">';
+                    innerHTML += '<tbody>';
 
                     if (Object.keys(namespaces).length) {
-                      innerHTML += '<table class="table table-bordered text-center">';
-                      innerHTML += '<thead>';
-                      innerHTML += '<tr><th>Name</th><th>Variables</th><th>Users</th>';
-                      innerHTML += '</thead>';
-                      innerHTML += '<tbody>';
-
                       for (let ns of Object.keys(namespaces).sort()) {
-                        innerHTML += '<tr><td class="font-monospace">' + quote(ns) + '</td><td>' + namespaces[ns].length + '</td><td>' + (ns in nscount ? nscount[ns] : '0') + '</td></tr>';
+                        innerHTML += '<tr><td class="font-monospace">' + quote(ns) + '</td></tr>';
                       }
                     } else {
-                      innerHTML += '<table class="table table-borderless">';
-                      innerHTML += '<tbody>';
                       innerHTML += '<tr><td class="text-danger">No Namespaces</td></tr>';
                     }
 
