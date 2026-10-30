@@ -59,13 +59,13 @@
                         }
                       }
                       innerHTML += '</td>';
-                      innerHTML += '<td>' + quote(users[u].description) + '</td>';
+                      innerHTML += '<td>' + quote(users[u]['description']) + '</td>';
 
                       if (users[u].hasOwnProperty('password')) {
                         innerHTML += '<td>Local</td>';
 
                       } else if (users[u].hasOwnProperty('ldap_server')) {
-                        innerHTML += '<td>ldaps://' + users[u].ldap_server + '</td>';
+                        innerHTML += '<td>ldaps://' + users[u]['ldap_server'] + '</td>';
                       }
 
                       if (users[u].hasOwnProperty('namespaces') && Object.keys(users[u]['namespaces']).length) {
@@ -84,7 +84,7 @@
                         innerHTML += '<td>-</td>';
                       }
 
-                      if (users[u].hasOwnProperty('flags') && users[u].flags.includes('expired')) {
+                      if (users[u].hasOwnProperty('flags') && users[u]['flags'].includes('expired')) {
                         innerHTML += '<td><span class="badge text-bg-warning">Expired</span></td>';
                       }
                       else if (users[u]['disabled']) {

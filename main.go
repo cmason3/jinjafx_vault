@@ -966,24 +966,24 @@ func apiPostHandler(w http.ResponseWriter, r *http.Request) {
               cflag = 1
 
             } else if ok {
-              if len(vault.Users[u].Description) > 0 {
+              if len(request.Description) > 0 {
                 if vault.Users[u].Description != request.Description {
                   vault.Users[u].Description = request.Description
                   cflag = 2
                 }
               }
-              if len(vault.Users[u].LdapServer) > 0 {
+              if len(request.LdapServer) > 0 {
                 if vault.Users[u].LdapServer != request.LdapServer {
                   vault.Users[u].LdapServer = request.LdapServer
                   cflag = 2
                 }
               }
-              if len(vault.Users[u].LdapDomain) > 0 {
+              if len(request.LdapDomain) > 0 {
                 if vault.Users[u].LdapDomain != request.LdapDomain {
                  vault.Users[u].LdapDomain = request.LdapDomain
                   cflag = 2
                 }
-              } 
+              }
             } else {
               http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
               return
