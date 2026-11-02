@@ -1,6 +1,6 @@
 ## CHANGELOG
 
-### [v0.3.7] - In Development
+### [v0.3.7] - November 2, 2026
 - Fixed an issue where user expiry via chage wasn't working
 - Further cosmetic enhancements to the web interface
 - Resetting the Vault now re-enables a disabled root account
